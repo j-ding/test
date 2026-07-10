@@ -2,6 +2,7 @@
     ViewData["Title"] = "Sign in";
     var returnUrl = ViewData["ReturnUrl"] as string;
     var authError = ViewData["AuthError"] as bool? ?? false;
+    var showDevSignIn = ViewData["ShowDevSignIn"] as bool? ?? false;
 }
 
 <div class="row justify-content-center">
@@ -29,6 +30,19 @@
                         Sign in with Microsoft
                     </button>
                 </form>
+
+                @if (showDevSignIn)
+                {
+                    <hr class="my-3" />
+                    <p class="small text-muted mb-2">Development environment only &mdash; not available once deployed.</p>
+                    <form asp-controller="Account" asp-action="DevSignIn" method="post">
+                        <input type="hidden" name="returnUrl" value="@returnUrl" />
+                        @Html.AntiForgeryToken()
+                        <button type="submit" class="btn btn-outline-secondary w-100">
+                            Dev: Sign in as test user
+                        </button>
+                    </form>
+                }
             </div>
         </div>
     </div>
