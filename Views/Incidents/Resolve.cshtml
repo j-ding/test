@@ -1,0 +1,51 @@
+@model SFSWebForm.Models.Incident
+@{
+    ViewData["Title"] = $"Resolve Incident #{Model.Id}";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="d-flex align-items-center mb-4">
+            <a asp-action="Detail" asp-route-id="@Model.Id" class="btn btn-sm btn-outline-secondary me-3">&#8592; Back</a>
+            <h1 class="h3 mb-0 text-success">&#10003; Resolve — @Model.Application</h1>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-success text-white fw-semibold">
+                Mark Incident #@Model.Id as Resolved
+            </div>
+            <div class="card-body p-4">
+                <div class="alert alert-info small mb-4">
+                    This will mark the incident <strong>Resolved</strong> and generate the final resolution email.
+                    The original outage time was <strong>@Model.FailureTime.ToString("MM/dd/yyyy HH:mm")</strong>.
+                </div>
+
+                <form asp-action="Resolve" asp-route-id="@Model.Id" method="post">
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Resolution Time *</label>
+                        <input type="datetime-local" name="ResolvedTime" class="form-control"
+                               value="@(Model.ResolvedTime?.ToString("yyyy-MM-ddTHH:mm") ?? DateTime.Now.ToString("yyyy-MM-ddTHH:mm"))" required />
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Root Cause</label>
+                        <textarea name="RootCause" class="form-control" rows="3">@Model.RootCause</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Resolution / Action Taken</label>
+                        <textarea name="ResolutionAction" class="form-control" rows="3">@Model.ResolutionAction</textarea>
+                    </div>
+                    <div class="mb-3">
+                        <label class="form-label fw-semibold">Impacted Apps (confirm)</label>
+                        <input type="text" name="ImpactedApps" class="form-control" value="@Model.ImpactedApps" />
+                    </div>
+
+                    <hr class="my-4" />
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a asp-action="Detail" asp-route-id="@Model.Id" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-success px-4">&#10003; Mark Resolved &amp; Generate Email</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>

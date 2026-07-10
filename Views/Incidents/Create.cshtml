@@ -1,0 +1,115 @@
+@model SFSWebForm.Models.Incident
+@{
+    ViewData["Title"] = "New Incident";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-8">
+        <div class="d-flex align-items-center mb-4">
+            <a asp-action="Index" class="btn btn-sm btn-outline-secondary me-3">&#8592; Back</a>
+            <h1 class="h3 mb-0 text-danger">&#9888; New Critical Incident</h1>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-danger text-white">
+                <strong>Incident Details</strong>
+                <span class="float-end small opacity-75">Fields marked * are required</span>
+            </div>
+            <div class="card-body p-4">
+                <form asp-action="Create" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="FailureTime" class="form-label fw-semibold">Date &amp; Time of Failure *</label>
+                            <input asp-for="FailureTime" type="datetime-local" class="form-control" />
+                            <span asp-validation-for="FailureTime" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="ReportedBy" class="form-label fw-semibold">Report Created By *</label>
+                            <input asp-for="ReportedBy" class="form-control" placeholder="Your name" />
+                            <span asp-validation-for="ReportedBy" class="text-danger small"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Application" class="form-label fw-semibold">Application / System *</label>
+                            <input asp-for="Application" class="form-control" placeholder="e.g. SFS Portal, Payroll System" />
+                            <span asp-validation-for="Application" class="text-danger small"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Summary" class="form-label fw-semibold">Summary *</label>
+                            <textarea asp-for="Summary" class="form-control" rows="3" placeholder="What is down / unavailable?"></textarea>
+                            <span asp-validation-for="Summary" class="text-danger small"></span>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="RootCause" class="form-label fw-semibold">Root Cause <span class="text-muted fw-normal">(leave blank if unknown)</span></label>
+                            <textarea asp-for="RootCause" class="form-control" rows="2" placeholder="Defaults to 'under investigation' in email"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="ImpactedApps" class="form-label fw-semibold">Other Impacted Apps</label>
+                            <input asp-for="ImpactedApps" class="form-control" placeholder="Comma-separated list" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="ResourcesWorkingOn" class="form-label fw-semibold">Team / Resources Engaged</label>
+                            <input asp-for="ResourcesWorkingOn" class="form-control" placeholder="Names or teams" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Eta" class="form-label fw-semibold">ETA</label>
+                            <input asp-for="Eta" class="form-control" placeholder="e.g. 2:00 PM or 'No ETA'" />
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="NextSteps" class="form-label fw-semibold">Next Steps <span class="text-muted fw-normal">(optional — omitted from email if blank)</span></label>
+                            <div class="btn-group btn-group-sm mb-1" role="group">
+                                <button type="button" class="btn btn-outline-secondary" onclick="applyListFormat('NextSteps', 'bullet')">&#8226; Bullets</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="applyListFormat('NextSteps', 'number')">1. Numbers</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="applyListFormat('NextSteps', 'clear')">&#10005; Clear</button>
+                            </div>
+                            <textarea asp-for="NextSteps" id="NextSteps" class="form-control" rows="2" placeholder="e.g. Vendor escalation underway, failover being evaluated…"></textarea>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="SenderTeam" class="form-label fw-semibold">Sending Team *</label>
+                            <input asp-for="SenderTeam" class="form-control" placeholder="e.g. IT Operations Team, Platform Engineering" />
+                            <div class="form-text">Appears at the bottom of all emails for this incident.</div>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="Recipients" class="form-label fw-semibold">Email Recipients</label>
+                            <input asp-for="Recipients" class="form-control" placeholder="e.g. all-staff@company.com, it-alerts@company.com" />
+                            <div class="form-text">Comma-separated. Leave blank to use the site default configured in appsettings.json.</div>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a asp-action="Index" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-danger px-4">Create Incident &amp; Generate Initial Email</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        const dt = document.getElementById('FailureTime');
+        if (dt && !dt.value) {
+            const now = new Date();
+            now.setSeconds(0, 0);
+            dt.value = now.toISOString().slice(0, 16);
+        }
+
+        function applyListFormat(textareaId, type) {
+            const ta = document.getElementById(textareaId);
+            const lines = ta.value.split('\n');
+            let counter = 1;
+            ta.value = lines.map(line => {
+                const stripped = line.replace(/^(\s*)(•\s*|\d+\.\s+)/, '$1');
+                if (stripped.trim() === '') return line;
+                if (type === 'bullet')  return stripped.replace(/^(\s*)/, '$1• ');
+                if (type === 'number')  return stripped.replace(/^(\s*)/, `$1${counter++}. `);
+                return stripped;
+            }).join('\n');
+            ta.focus();
+        }
+    </script>
+}

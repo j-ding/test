@@ -1,0 +1,55 @@
+@model SFSWebForm.Models.EmailCardViewModel
+@{
+    var bodyId = $"body-{Model.Email.Id}";
+    var taId = $"ta-{Model.Email.Id}";
+    string headerText = Model.IsDark ? "text-dark" : "text-white";
+}
+
+<div class="card shadow-sm mb-3 border-@Model.Color">
+    <div class="card-header d-flex align-items-center justify-content-between bg-@Model.Color @headerText">
+        <span class="fw-semibold">@Model.Label</span>
+        <div class="d-flex align-items-center gap-2">
+            <small class="opacity-75">@Model.Email.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm")</small>
+            <button class="btn btn-sm btn-light py-0 px-2" type="button"
+                    data-bs-toggle="collapse" data-bs-target="#@bodyId">Hide</button>
+        </div>
+    </div>
+
+    <div class="collapse show" id="@bodyId">
+        <div class="card-body p-3">
+
+            <div id="subject-view-@Model.Email.Id" class="mb-2">
+                <span class="text-muted small">Subject:</span>
+                <strong class="small d-block">@Model.Email.Subject</strong>
+            </div>
+
+            <div id="subject-edit-@Model.Email.Id" class="mb-2 d-none">
+                <label class="form-label small fw-semibold mb-1">Subject</label>
+                <input type="text" id="subject-input-@Model.Email.Id"
+                       class="form-control form-control-sm"
+                       value="@Model.Email.Subject" />
+            </div>
+
+            <div id="view-actions-@Model.Email.Id" class="d-flex justify-content-end gap-2 mb-2">
+                <button type="button" class="btn btn-sm btn-outline-secondary copy-btn"
+                        data-target="@taId">Copy Email</button>
+                <button type="button" class="btn btn-sm btn-outline-success send-email-btn"
+                        id="send-btn-@Model.Email.Id"
+                        onclick="sendEmail(@Model.Email.Id)">Send</button>
+                <button type="button" class="btn btn-sm btn-outline-primary"
+                        onclick="enterEditMode(@Model.Email.Id)">Edit</button>
+            </div>
+
+            <div id="edit-actions-@Model.Email.Id" class="d-flex justify-content-end gap-2 mb-2 d-none">
+                <button type="button" class="btn btn-sm btn-outline-secondary"
+                        onclick="cancelEditMode(@Model.Email.Id)">Cancel</button>
+                <button type="button" id="save-btn-@Model.Email.Id" class="btn btn-sm btn-success"
+                        onclick="saveEmail(@Model.Email.Id)">Save</button>
+            </div>
+
+            <textarea id="@taId" class="form-control font-monospace small" rows="10"
+                      readonly>@Model.Email.Body</textarea>
+
+        </div>
+    </div>
+</div>

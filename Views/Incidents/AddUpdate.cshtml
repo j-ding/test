@@ -1,0 +1,96 @@
+@model SFSWebForm.Models.IncidentUpdate
+@using SFSWebForm.Models
+@{
+    var incident = (Incident)ViewBag.Incident;
+    ViewData["Title"] = $"Add Update – Incident #{incident.Id}";
+}
+
+<div class="row justify-content-center">
+    <div class="col-lg-7">
+        <div class="d-flex align-items-center mb-4">
+            <a asp-action="Detail" asp-route-id="@incident.Id" class="btn btn-sm btn-outline-secondary me-3">&#8592; Back</a>
+            <h1 class="h3 mb-0 text-warning">&#9648; Add Update — @incident.Application</h1>
+        </div>
+
+        <div class="card shadow-sm">
+            <div class="card-header bg-warning text-dark fw-semibold">
+                Update #@(incident.Updates.Count + 1) &mdash; Incident #@incident.Id
+            </div>
+            <div class="card-body p-4">
+                <form asp-action="AddUpdate" asp-route-id="@incident.Id" method="post">
+                    <div asp-validation-summary="ModelOnly" class="alert alert-danger py-2"></div>
+
+                    <div class="mb-3">
+                        <label asp-for="Note" class="form-label fw-semibold">Update Note *</label>
+                        <textarea asp-for="Note" class="form-control" rows="4"
+                                  placeholder="Describe the current situation, what's been tried, what's happening next…"></textarea>
+                        <span asp-validation-for="Note" class="text-danger small"></span>
+                    </div>
+
+                    <div class="row g-3">
+                        <div class="col-md-6">
+                            <label asp-for="Status" class="form-label fw-semibold">Current Status</label>
+                            <select asp-for="Status" class="form-select"
+                                    asp-items="Html.GetEnumSelectList<IncidentStatus>()"></select>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Eta" class="form-label fw-semibold">Updated ETA</label>
+                            <input asp-for="Eta" class="form-control" placeholder="e.g. 3:30 PM or 'No ETA'" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="ResourcesWorkingOn" class="form-label fw-semibold">Team / Resources Engaged</label>
+                            <input asp-for="ResourcesWorkingOn" class="form-control" />
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="NextExpectedUpdate" class="form-label fw-semibold">
+                                Next Update Expected
+                                <span class="text-muted fw-normal">(optional)</span>
+                            </label>
+                            <input asp-for="NextExpectedUpdate" type="datetime-local" class="form-control" />
+                            <div class="form-text">Included in the email so recipients know when to expect the next message.</div>
+                        </div>
+                        <div class="col-12">
+                            <label asp-for="NextSteps" class="form-label fw-semibold">
+                                Next Steps
+                                <span class="text-muted fw-normal">(optional — omitted from email if blank)</span>
+                            </label>
+                            <div class="btn-group btn-group-sm mb-1" role="group" aria-label="List formatting">
+                                <button type="button" class="btn btn-outline-secondary" onclick="applyListFormat('NextSteps', 'bullet')" title="Format as bullet list">&#8226; Bullets</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="applyListFormat('NextSteps', 'number')" title="Format as numbered list">1. Numbers</button>
+                                <button type="button" class="btn btn-outline-secondary" onclick="applyListFormat('NextSteps', 'clear')" title="Remove list formatting">&#10005; Clear</button>
+                            </div>
+                            <textarea asp-for="NextSteps" id="NextSteps" class="form-control" rows="4"
+                                      placeholder="e.g. Awaiting vendor response&#10;Failover scheduled for 3pm&#10;Will update by 4pm"></textarea>
+                        </div>
+                    </div>
+
+                    <hr class="my-4" />
+                    <div class="d-flex gap-2 justify-content-end">
+                        <a asp-action="Detail" asp-route-id="@incident.Id" class="btn btn-outline-secondary">Cancel</a>
+                        <button type="submit" class="btn btn-warning px-4">Save Update &amp; Generate Email</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+@section Scripts {
+    <partial name="_ValidationScriptsPartial" />
+    <script>
+        function applyListFormat(textareaId, type) {
+            const ta = document.getElementById(textareaId);
+            const lines = ta.value.split('\n');
+            let counter = 1;
+            ta.value = lines.map(line => {
+                // Strip any existing bullet or number prefix
+                const stripped = line.replace(/^(\s*)(•\s*|\d+\.\s+)/, '$1');
+                if (stripped.trim() === '') return line; // leave blank lines alone
+                if (type === 'bullet')  return stripped.replace(/^(\s*)/, '$1• ');
+                if (type === 'number')  return stripped.replace(/^(\s*)/, `$1${counter++}. `);
+                return stripped; // clear
+            }).join('\n');
+            ta.focus();
+        }
+    </script>
+}

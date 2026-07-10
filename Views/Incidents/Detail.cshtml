@@ -1,0 +1,236 @@
+@model SFSWebForm.Models.Incident
+@using SFSWebForm.Models
+@{
+    ViewData["Title"] = $"Incident #{Model.Id}";
+    var initialEmail = Model.Emails.FirstOrDefault(e => e.Type == EmailType.InitialOutage);
+    var updateEmails = Model.Emails.Where(e => e.Type == EmailType.Update).OrderBy(e => e.GeneratedAt).ToList();
+    var resolutionEmail = Model.Emails.FirstOrDefault(e => e.Type == EmailType.Resolution);
+    bool isResolved = Model.Status == IncidentStatus.Resolved;
+
+    // Pre-compute log entries with sequential numbering only for real Update entries
+    int _updateCounter = 0;
+    var logEntries = new List<(IncidentUpdate Entry, int Num)>();
+    foreach (var u in Model.Updates.OrderBy(u => u.CreatedAt))
+        logEntries.Add((u, u.EntryType == UpdateEntryType.Update ? ++_updateCounter : 0));
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4 flex-wrap gap-2">
+    <div class="d-flex align-items-center gap-3">
+        <a asp-action="Index" class="btn btn-sm btn-outline-secondary">&#8592; All Incidents</a>
+        <h1 class="h3 mb-0">
+            Incident #@Model.Id
+            @if (Model.Status == IncidentStatus.Open)
+            {
+                <span class="badge bg-danger ms-2">Open</span>
+            }
+            else if (Model.Status == IncidentStatus.InProgress)
+            {
+                <span class="badge bg-warning text-dark ms-2">In Progress</span>
+            }
+            else
+            {
+                <span class="badge bg-success ms-2">Resolved</span>
+            }
+        </h1>
+    </div>
+    @if (!isResolved)
+    {
+        <div class="d-flex gap-2">
+            <a asp-action="AddUpdate" asp-route-id="@Model.Id" class="btn btn-warning">+ Add Update</a>
+            <a asp-action="Resolve" asp-route-id="@Model.Id" class="btn btn-success">&#10003; Resolve</a>
+        </div>
+    }
+    else
+    {
+        <form asp-action="Reopen" asp-route-id="@Model.Id" method="post" class="d-inline">
+            <button type="submit" class="btn btn-outline-secondary btn-sm"
+                    onclick="return confirm('Reopen this incident? The resolution email will be removed.')">
+                &#8617; Reopen Incident
+            </button>
+        </form>
+    }
+</div>
+
+<div class="row g-4">
+    <!-- Incident summary sidebar -->
+    <div class="col-lg-4">
+        <div class="card shadow-sm">
+            <div class="card-header bg-light fw-semibold">Incident Summary</div>
+            <div class="card-body small">
+                <dl class="row mb-0">
+                    <dt class="col-5 text-muted">Application</dt>
+                    <dd class="col-7 fw-semibold">@Model.Application</dd>
+
+                    <dt class="col-5 text-muted">Failure Time</dt>
+                    <dd class="col-7">@Model.FailureTime.ToString("MM/dd/yyyy HH:mm")</dd>
+
+                    @if (Model.ResolvedTime.HasValue)
+                    {
+                        <dt class="col-5 text-muted">Resolved</dt>
+                        <dd class="col-7">@Model.ResolvedTime.Value.ToString("MM/dd/yyyy HH:mm")</dd>
+                    }
+
+                    <dt class="col-5 text-muted">Reporter</dt>
+                    <dd class="col-7">@Model.ReportedBy</dd>
+
+                    <dt class="col-5 text-muted">Summary</dt>
+                    <dd class="col-7">@Model.Summary</dd>
+
+                    @if (!string.IsNullOrEmpty(Model.RootCause))
+                    {
+                        <dt class="col-5 text-muted">Root Cause</dt>
+                        <dd class="col-7">@Model.RootCause</dd>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.ImpactedApps))
+                    {
+                        <dt class="col-5 text-muted">Also Impacted</dt>
+                        <dd class="col-7">@Model.ImpactedApps</dd>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.ResourcesWorkingOn))
+                    {
+                        <dt class="col-5 text-muted">Team Engaged</dt>
+                        <dd class="col-7">@Model.ResourcesWorkingOn</dd>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.Eta))
+                    {
+                        <dt class="col-5 text-muted">ETA</dt>
+                        <dd class="col-7">@Model.Eta</dd>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.ResolutionAction))
+                    {
+                        <dt class="col-5 text-muted">Resolution</dt>
+                        <dd class="col-7">@Model.ResolutionAction</dd>
+                    }
+
+                    <dt class="col-5 text-muted">Sending Team</dt>
+                    <dd class="col-7">@Model.SenderTeam</dd>
+                </dl>
+            </div>
+        </div>
+
+        @if (!isResolved)
+        {
+            <div class="card shadow-sm mt-3 border-success">
+                <div class="card-header bg-success text-white fw-semibold small">Draft Resolution Email</div>
+                <div class="card-body p-3">
+                    <p class="small text-muted mb-3">Save a draft at any time — email appears in the timeline and can be re-drafted as many times as needed.</p>
+                    <form asp-action="DraftResolution" asp-route-id="@Model.Id" method="post">
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Resolution Time</label>
+                            <input type="datetime-local" name="ResolvedTime" class="form-control form-control-sm"
+                                   value="@(Model.ResolvedTime?.ToString("yyyy-MM-ddTHH:mm") ?? DateTime.Now.ToString("yyyy-MM-ddTHH:mm"))" />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Root Cause</label>
+                            <textarea name="RootCause" class="form-control form-control-sm" rows="2">@Model.RootCause</textarea>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Resolution / Action Taken</label>
+                            <textarea name="ResolutionAction" class="form-control form-control-sm" rows="2">@Model.ResolutionAction</textarea>
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Impacted Apps</label>
+                            <input type="text" name="ImpactedApps" class="form-control form-control-sm" value="@Model.ImpactedApps" />
+                        </div>
+                        <div class="mb-3">
+                            <label class="form-label small fw-semibold">Sending Team</label>
+                            <input type="text" name="SenderTeam" class="form-control form-control-sm" value="@Model.SenderTeam" />
+                        </div>
+                        <button type="submit" class="btn btn-sm btn-outline-success w-100">&#8635; Refresh Resolution Draft</button>
+                    </form>
+                </div>
+            </div>
+        }
+    </div>
+
+    <!-- Email timeline -->
+    <div class="col-lg-8">
+        <h5 class="fw-semibold mb-3">Email Timeline</h5>
+
+        @if (initialEmail != null)
+        {
+            <partial name="_EmailCard" model='new SFSWebForm.Models.EmailCardViewModel(initialEmail, "Initial Outage Notification", "danger", false)' />
+        }
+
+        @{ int updateIdx = 1; }
+        @foreach (var upEmail in updateEmails)
+        {
+            <partial name="_EmailCard" model='new SFSWebForm.Models.EmailCardViewModel(upEmail, $"Update #{updateIdx}", "warning", true)' />
+            updateIdx++;
+        }
+
+        @if (resolutionEmail != null)
+        {
+            <partial name="_EmailCard" model='new SFSWebForm.Models.EmailCardViewModel(resolutionEmail, "Resolution Notification", "success", false)' />
+        }
+
+        @if (!Model.Emails.Any())
+        {
+            <div class="text-muted text-center py-4 border rounded bg-light">No emails generated yet.</div>
+        }
+
+        @if (logEntries.Any())
+        {
+            <h5 class="fw-semibold mt-4 mb-3">Update Log</h5>
+            @foreach (var (entry, num) in logEntries)
+            {
+                if (entry.EntryType == UpdateEntryType.Resolved)
+                {
+                    <div class="card shadow-sm mb-2 border-success">
+                        <div class="card-body py-2 px-3 small bg-success-subtle">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-semibold text-success">Resolved &mdash; @entry.CreatedAt.ToLocalTime().ToString("MM/dd HH:mm")</span>
+                                <span class="badge bg-success">Resolved</span>
+                            </div>
+                            <p class="mb-0 mt-1 text-muted">@entry.Note</p>
+                        </div>
+                    </div>
+                }
+                else if (entry.EntryType == UpdateEntryType.Reopened)
+                {
+                    <div class="card shadow-sm mb-2 border-warning">
+                        <div class="card-body py-2 px-3 small bg-warning-subtle">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-semibold text-warning-emphasis">Reopened &mdash; @entry.CreatedAt.ToLocalTime().ToString("MM/dd HH:mm")</span>
+                                <span class="badge bg-warning text-dark">Reopened</span>
+                            </div>
+                            <p class="mb-0 mt-1 text-muted">@entry.Note</p>
+                        </div>
+                    </div>
+                }
+                else
+                {
+                    <div class="card shadow-sm mb-2">
+                        <div class="card-body py-2 px-3 small">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-semibold text-muted">Update #@num &mdash; @entry.CreatedAt.ToLocalTime().ToString("MM/dd HH:mm")</span>
+                                @if (entry.Status == IncidentStatus.Open)
+                                {
+                                    <span class="badge bg-danger">Open</span>
+                                }
+                                else if (entry.Status == IncidentStatus.InProgress)
+                                {
+                                    <span class="badge bg-warning text-dark">In Progress</span>
+                                }
+                                else
+                                {
+                                    <span class="badge bg-success">Resolved</span>
+                                }
+                            </div>
+                            <p class="mb-0 mt-1">@entry.Note</p>
+                        </div>
+                    </div>
+                }
+            }
+        }
+    </div>
+</div>
+
+@section Scripts {
+    @* Antiforgery token for the inline email save fetch call *@
+    @Html.AntiForgeryToken()
+}

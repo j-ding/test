@@ -1,0 +1,110 @@
+/* ===== SFS Incident Manager – site.css ===== */
+
+:root {
+    --brand-red: #dc3545;
+    --radius: 0.5rem;
+}
+
+html {
+    font-size: 15px;
+    position: relative;
+    min-height: 100%;
+}
+
+body {
+    font-family: "Segoe UI", system-ui, -apple-system, sans-serif;
+    background: #f8f9fa;
+    color: #212529;
+}
+
+/* Navbar new-incident button — keep white text on hover instead of solid white fill */
+.navbar .btn-outline-light:hover,
+.navbar .btn-outline-light:focus {
+    background-color: rgba(255, 255, 255, 0.15);
+    border-color: #fff;
+    color: #fff;
+}
+
+/* Focus rings */
+.btn:focus, .btn:active:focus, .form-control:focus, .form-check-input:focus {
+    box-shadow: 0 0 0 0.15rem rgba(220, 53, 69, .35);
+}
+
+/* Cards */
+.card {
+    border-radius: var(--radius);
+    border: 1px solid rgba(0,0,0,.1);
+}
+
+.card-header {
+    border-radius: calc(var(--radius) - 1px) calc(var(--radius) - 1px) 0 0 !important;
+    font-size: .875rem;
+}
+
+/* Tables */
+.table th {
+    font-size: .78rem;
+    text-transform: uppercase;
+    letter-spacing: .04em;
+    color: #6c757d;
+}
+
+.table td {
+    font-size: .9rem;
+    vertical-align: middle;
+}
+
+/* Email textarea (dark code look) */
+textarea.font-monospace {
+    font-size: .8rem;
+    line-height: 1.55;
+    background: #1e1e1e;
+    color: #d4d4d4;
+    border: none;
+    border-radius: 0 0 var(--radius) var(--radius);
+    resize: vertical;
+}
+
+/* Copy button */
+.copy-btn {
+    font-size: .78rem;
+}
+
+/* Badge sizing */
+.badge {
+    font-size: .72rem;
+    padding: .35em .65em;
+}
+
+/* Form labels */
+.form-label.fw-semibold {
+    font-size: .875rem;
+    margin-bottom: .3rem;
+}
+
+/* Alert tweaks */
+.alert {
+    font-size: .9rem;
+    border-radius: var(--radius);
+}
+
+/* dl layout fix */
+dl.row dt, dl.row dd {
+    font-size: .875rem;
+    margin-bottom: .4rem;
+}
+
+/* Responsive */
+@media (max-width: 576px) {
+    h1.h3 { font-size: 1.15rem; }
+    .table-responsive { font-size: .82rem; }
+    .d-flex.gap-2.justify-content-end {
+        flex-direction: column;
+    }
+    .d-flex.gap-2.justify-content-end .btn {
+        width: 100%;
+    }
+}
+
+/* Footer */
+footer { font-size: .8rem; }

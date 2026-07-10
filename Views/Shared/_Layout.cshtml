@@ -1,0 +1,87 @@
+@using System.Security.Claims
+@{
+    var _displayUser = User.FindFirst("DisplayName")?.Value
+        ?? User.FindFirst(ClaimTypes.Name)?.Value
+        ?? User.Identity?.Name ?? "";
+    var _userEmail = User.FindFirst("UserEmail")?.Value
+        ?? User.FindFirst(ClaimTypes.Email)?.Value
+        ?? "";
+    var _isAuth = User?.Identity?.IsAuthenticated ?? false;
+}
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>@ViewData["Title"] - SFS Incident Manager</title>
+    <link rel="stylesheet" href="~/lib/bootstrap/dist/css/bootstrap.min.css" />
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
+</head>
+<body class="d-flex flex-column min-vh-100">
+    <header>
+        <nav class="navbar navbar-expand-md navbar-dark bg-danger shadow-sm">
+            <div class="container-fluid">
+                <a class="navbar-brand fw-bold" asp-controller="Incidents" asp-action="Index">
+                    &#9888; SFS Incident Manager
+                </a>
+                <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navMain">
+                    <span class="navbar-toggler-icon"></span>
+                </button>
+                <div class="collapse navbar-collapse" id="navMain">
+                    <ul class="navbar-nav ms-auto">
+                        <li class="nav-item">
+                            <a class="nav-link" asp-controller="Incidents" asp-action="Index">All Incidents</a>
+                        </li>
+                        @if (_isAuth)
+                        {
+                            <li class="nav-item d-flex align-items-center ms-md-3">
+                                <div class="text-end">
+                                    <div class="small text-white fw-semibold">@_displayUser</div>
+                                    <div class="text-white-50 small">@_userEmail</div>
+                                </div>
+                            </li>
+                            <li class="nav-item">
+                                <form asp-controller="Account" asp-action="Logout" method="post" class="d-inline">
+                                    @Html.AntiForgeryToken()
+                                    <button type="submit" class="nav-link btn btn-outline-light btn-sm ms-md-3 px-3">Sign out</button>
+                                </form>
+                            </li>
+                        }
+                        else
+                        {
+                            <li class="nav-item">
+                                <a class="nav-link btn btn-outline-light btn-sm ms-md-3 px-3" asp-controller="Account" asp-action="Login">Sign in</a>
+                            </li>
+                        }
+                        <li class="nav-item">
+                            <a class="nav-link btn btn-outline-light btn-sm ms-md-3 px-3" asp-controller="Incidents" asp-action="Create">+ New Incident</a>
+                        </li>
+                    </ul>
+                </div>
+            </div>
+        </nav>
+    </header>
+
+    <main class="container py-4 flex-grow-1">
+        @if (TempData["Success"] != null)
+        {
+            <div class="alert alert-success alert-dismissible fade show" role="alert">
+                @TempData["Success"]
+                <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+            </div>
+        }
+        @RenderBody()
+    </main>
+
+    <footer class="border-top bg-light py-3 mt-auto">
+        <div class="container text-muted small text-center">
+            SFS Incident Manager &mdash; IT Operations &mdash; @DateTime.Now.Year
+        </div>
+    </footer>
+
+    <script src="~/lib/jquery/dist/jquery.min.js"></script>
+    <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="~/js/site.js" asp-append-version="true"></script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

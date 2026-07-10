@@ -1,0 +1,104 @@
+@model IEnumerable<SFSWebForm.Models.Incident>
+@using SFSWebForm.Models
+@{
+    ViewData["Title"] = "All Incidents";
+    var active = Model.Where(i => i.Status != IncidentStatus.Resolved).ToList();
+    var resolved = Model.Where(i => i.Status == IncidentStatus.Resolved).ToList();
+}
+
+<div class="d-flex align-items-center justify-content-between mb-4">
+    <h1 class="h3 mb-0">Incident Dashboard</h1>
+    <a asp-action="Create" class="btn btn-danger">+ New Incident</a>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="text-center py-5 text-muted">
+        <div style="font-size:3rem">&#10003;</div>
+        <h4>No incidents on record</h4>
+        <p>When an outage occurs, create an incident to start the notification workflow.</p>
+        <a asp-action="Create" class="btn btn-danger">Create First Incident</a>
+    </div>
+}
+else
+{
+    @if (active.Any())
+    {
+        <h5 class="text-danger mb-3">&#9888; Active (@active.Count)</h5>
+        <div class="card shadow-sm mb-5">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Application</th>
+                            <th>Summary</th>
+                            <th>Status</th>
+                            <th>Failure Time</th>
+                            <th>Reporter</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var i in active)
+                        {
+                            <tr>
+                                <td class="fw-bold text-muted">#@i.Id</td>
+                                <td class="fw-semibold">@i.Application</td>
+                                <td class="text-truncate" style="max-width:260px">@i.Summary</td>
+                                <td>@StatusBadge(i.Status)</td>
+                                <td>@i.FailureTime.ToString("MM/dd HH:mm")</td>
+                                <td>@i.ReportedBy</td>
+                                <td><a asp-action="Detail" asp-route-id="@i.Id" class="btn btn-sm btn-outline-primary">View</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+
+    @if (resolved.Any())
+    {
+        <h5 class="text-secondary mb-3">Resolved (@resolved.Count)</h5>
+        <div class="card shadow-sm">
+            <div class="table-responsive">
+                <table class="table table-hover align-middle mb-0 text-muted">
+                    <thead class="table-light">
+                        <tr>
+                            <th>ID</th>
+                            <th>Application</th>
+                            <th>Summary</th>
+                            <th>Failure Time</th>
+                            <th>Resolved</th>
+                            <th></th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var i in resolved)
+                        {
+                            <tr>
+                                <td>#@i.Id</td>
+                                <td>@i.Application</td>
+                                <td class="text-truncate" style="max-width:260px">@i.Summary</td>
+                                <td>@i.FailureTime.ToString("MM/dd HH:mm")</td>
+                                <td>@i.ResolvedTime?.ToString("MM/dd HH:mm")</td>
+                                <td><a asp-action="Detail" asp-route-id="@i.Id" class="btn btn-sm btn-outline-secondary">View</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    }
+}
+
+@functions {
+    static Microsoft.AspNetCore.Html.IHtmlContent StatusBadge(IncidentStatus status) => status switch
+    {
+        IncidentStatus.Open => new Microsoft.AspNetCore.Html.HtmlString("<span class=\"badge bg-danger\">Open</span>"),
+        IncidentStatus.InProgress => new Microsoft.AspNetCore.Html.HtmlString("<span class=\"badge bg-warning text-dark\">In Progress</span>"),
+        IncidentStatus.Resolved => new Microsoft.AspNetCore.Html.HtmlString("<span class=\"badge bg-success\">Resolved</span>"),
+        _ => new Microsoft.AspNetCore.Html.HtmlString(status.ToString())
+    };
+}
