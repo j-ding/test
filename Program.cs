@@ -1,10 +1,11 @@
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
 using Serilog;
 using Serilog.Events;
 using SFSWebForm.Data;
 using SFSWebForm.Models;
-using SFSWebForm.Services;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
@@ -37,13 +38,71 @@ try
             retainedFileCountLimit: 30,
             outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm} [{Level:u3}] {Message:lj}{NewLine}{Exception}"));
 
-    builder.Services.AddAuthentication(CookieAuthenticationDefaults.AuthenticationScheme)
+    var azureAd = builder.Configuration.GetSection("AzureAd");
+
+    builder.Services.AddAuthentication(options =>
+        {
+            // Cookie stays the default challenge scheme so an unauthenticated [Authorize] hit
+            // redirects to our /Account/Login portal page first, not straight to Microsoft.
+            // The portal's "Sign in with Microsoft" button explicitly challenges OpenIdConnect.
+            options.DefaultScheme = CookieAuthenticationDefaults.AuthenticationScheme;
+            options.DefaultSignOutScheme = OpenIdConnectDefaults.AuthenticationScheme;
+        })
         .AddCookie(options =>
         {
             options.LoginPath = "/Account/Login";
             options.LogoutPath = "/Account/Logout";
             options.AccessDeniedPath = "/Account/Login";
             options.ReturnUrlParameter = "returnUrl";
+        })
+        .AddOpenIdConnect(OpenIdConnectDefaults.AuthenticationScheme, options =>
+        {
+            var tenantId = azureAd["TenantId"];
+            options.Authority = $"https://login.microsoftonline.com/{tenantId}/v2.0";
+            options.ClientId = azureAd["ClientId"];
+            options.ClientSecret = azureAd["ClientSecret"];
+            options.ResponseType = "code";
+            options.CallbackPath = azureAd["CallbackPath"] ?? "/signin-oidc";
+            options.SignedOutCallbackPath = "/signout-callback-oidc";
+            options.SaveTokens = true;
+            options.UsePkce = true;
+            options.Scope.Clear();
+            options.Scope.Add("openid");
+            options.Scope.Add("profile");
+            options.Scope.Add("email");
+            options.TokenValidationParameters = new TokenValidationParameters
+            {
+                NameClaimType = "name"
+            };
+            options.Events = new OpenIdConnectEvents
+            {
+                OnTokenValidated = ctx =>
+                {
+                    var principal = ctx.Principal;
+                    if (principal == null) return Task.CompletedTask;
+
+                    var identity = (System.Security.Claims.ClaimsIdentity)principal.Identity!;
+                    var displayName = principal.FindFirst("name")?.Value
+                        ?? principal.Identity?.Name
+                        ?? string.Empty;
+                    var email = principal.FindFirst("preferred_username")?.Value
+                        ?? principal.FindFirst(System.Security.Claims.ClaimTypes.Email)?.Value
+                        ?? string.Empty;
+
+                    identity.AddClaim(new System.Security.Claims.Claim("DisplayName", displayName));
+                    identity.AddClaim(new System.Security.Claims.Claim("UserEmail", email));
+                    if (!principal.HasClaim(c => c.Type == System.Security.Claims.ClaimTypes.Email) && !string.IsNullOrWhiteSpace(email))
+                        identity.AddClaim(new System.Security.Claims.Claim(System.Security.Claims.ClaimTypes.Email, email));
+
+                    return Task.CompletedTask;
+                },
+                OnRemoteFailure = ctx =>
+                {
+                    ctx.Response.Redirect("/Account/Login?authError=1");
+                    ctx.HandleResponse();
+                    return Task.CompletedTask;
+                }
+            };
         });
 
     builder.Services.AddAuthorization();
@@ -55,7 +114,6 @@ try
     builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
     builder.Services.AddScoped<EmailComposerService>();
     builder.Services.AddScoped<EmailSenderService>();
-    builder.Services.AddSingleton<SFSWebForm.Services.AuthConfigService>();
     builder.Services.AddControllersWithViews();
 
     var app = builder.Build();

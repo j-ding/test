@@ -49,9 +49,6 @@ public class Incident
     [Display(Name = "Sending Team / Group")]
     public string SenderTeam { get; set; } = "IT Operations Team";
 
-    [Display(Name = "Email Recipients")]
-    public string? Recipients { get; set; }
-
     [Display(Name = "Resolution Time")]
     public DateTime? ResolvedTime { get; set; }
 

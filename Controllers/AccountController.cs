@@ -1,105 +1,58 @@
-using System.Security.Claims;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.Cookies;
+using Microsoft.AspNetCore.Authentication.OpenIdConnect;
 using Microsoft.AspNetCore.Mvc;
-using SFSWebForm.Models;
-using SFSWebForm.Services;
 
 namespace SFSWebForm.Controllers;
 
-public class AccountController(ILogger<AccountController> logger, AuthConfigService authConfig) : Controller
+public class AccountController(ILogger<AccountController> logger) : Controller
 {
     [HttpGet]
-    public IActionResult Login(string? returnUrl = null)
+    public IActionResult Login(string? returnUrl = null, string? authError = null)
     {
+        if (User.Identity?.IsAuthenticated == true)
+            return Redirect(!string.IsNullOrWhiteSpace(returnUrl) ? returnUrl : Url.Action("Index", "Incidents")!);
+
         ViewData["ReturnUrl"] = returnUrl;
-        return View(new LoginViewModel { ReturnUrl = returnUrl });
+        ViewData["AuthError"] = authError == "1";
+        return View();
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Login(LoginViewModel model)
+    public IActionResult SignIn(string? returnUrl = null)
     {
-        if (!ModelState.IsValid)
-            return View(model);
+        logger.LogInformation("Redirecting to Microsoft Entra ID sign-in (returnUrl: {ReturnUrl})", returnUrl);
 
-        var username = model.Username.Trim();
-        if (string.IsNullOrWhiteSpace(username) && User.Identity?.IsAuthenticated == true)
+        var properties = new AuthenticationProperties
         {
-            username = User.Identity.Name ?? string.Empty;
-        }
-
-        if (string.IsNullOrWhiteSpace(username))
-        {
-            ModelState.AddModelError(string.Empty, "Username or email is required.");
-            return View(model);
-        }
-
-        if (!TryAuthenticateAllowedUser(username, out var displayName, out var email, out var failureReason))
-        {
-            logger.LogWarning("Login failed for user '{Username}'. Reason: {Reason}", username, failureReason);
-            ModelState.AddModelError(string.Empty, "Your account is not authorized for this app.");
-            return View(model);
-        }
-
-        logger.LogInformation("Login succeeded for user '{Username}' as '{DisplayName}' ({Email})", username, displayName, email);
-
-        var claims = new List<Claim>
-        {
-            new(ClaimTypes.Name, displayName),
-            new(ClaimTypes.NameIdentifier, username),
-            new(ClaimTypes.Email, email),
-            new("DisplayName", displayName),
-            new("UserEmail", email)
+            RedirectUri = Url.Action(nameof(SignInCallback), new { returnUrl })
         };
+        return Challenge(properties, OpenIdConnectDefaults.AuthenticationScheme);
+    }
 
-        var identity = new ClaimsIdentity(claims, CookieAuthenticationDefaults.AuthenticationScheme);
-        var principal = new ClaimsPrincipal(identity);
-
-        var authProperties = new AuthenticationProperties
+    [HttpGet]
+    public IActionResult SignInCallback(string? returnUrl = null)
+    {
+        if (User.Identity?.IsAuthenticated != true)
         {
-            IsPersistent = model.RememberMe,
-            RedirectUri = model.ReturnUrl ?? Url.Action("Index", "Incidents")
-        };
+            logger.LogWarning("Sign-in callback reached without an authenticated principal");
+            return RedirectToAction(nameof(Login));
+        }
 
-        await HttpContext.SignInAsync(CookieAuthenticationDefaults.AuthenticationScheme, principal, authProperties);
+        logger.LogInformation("Login succeeded for '{DisplayName}' ({Email})",
+            User.FindFirst("DisplayName")?.Value, User.FindFirst("UserEmail")?.Value);
 
-        return Redirect(!string.IsNullOrWhiteSpace(model.ReturnUrl) ? model.ReturnUrl : Url.Action("Index", "Incidents")!);
+        return Redirect(!string.IsNullOrWhiteSpace(returnUrl) ? returnUrl : Url.Action("Index", "Incidents")!);
     }
 
     [HttpPost]
     [ValidateAntiForgeryToken]
-    public async Task<IActionResult> Logout()
+    public IActionResult Logout()
     {
-        await HttpContext.SignOutAsync(CookieAuthenticationDefaults.AuthenticationScheme);
-        return RedirectToAction("Login", "Account");
-    }
+        logger.LogInformation("Logout requested for '{DisplayName}'", User.FindFirst("DisplayName")?.Value);
 
-    private bool TryAuthenticateAllowedUser(string username, out string displayName, out string email, out string failureReason)
-    {
-        displayName = string.Empty;
-        email = string.Empty;
-        failureReason = "Unknown";
-
-        if (string.IsNullOrWhiteSpace(username))
-        {
-            failureReason = "Missing username or email";
-            return false;
-        }
-
-        var trimmed = username.Trim();
-        logger.LogInformation("Checking allow-list login for '{Username}'", trimmed);
-
-        var configuredUser = authConfig.FindUser(trimmed);
-        if (configuredUser == null)
-        {
-            failureReason = "User is not configured for this app";
-            return false;
-        }
-
-        displayName = configuredUser.DisplayName;
-        email = configuredUser.Email;
-        failureReason = string.Empty;
-        return true;
+        var properties = new AuthenticationProperties { RedirectUri = Url.Action(nameof(Login))! };
+        return SignOut(properties, CookieAuthenticationDefaults.AuthenticationScheme, OpenIdConnectDefaults.AuthenticationScheme);
     }
 }

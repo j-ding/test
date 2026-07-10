@@ -30,6 +30,29 @@
                        value="@Model.Email.Subject" />
             </div>
 
+            <div id="recipients-view-@Model.Email.Id" class="mb-2">
+                <span class="text-muted small">Recipients:</span>
+                <strong class="small d-block">@(string.IsNullOrWhiteSpace(Model.Email.Recipients) ? "(site default — see appsettings.json)" : Model.Email.Recipients)</strong>
+            </div>
+
+            <div id="recipients-edit-@Model.Email.Id" class="mb-2 d-none">
+                <label class="form-label small fw-semibold mb-1">Recipients</label>
+                <input type="text" id="recipients-input-@Model.Email.Id"
+                       class="form-control form-control-sm"
+                       placeholder="e.g. all-staff@company.com, it-alerts@company.com"
+                       value="@Model.Email.Recipients" />
+                <div class="form-text">Comma-separated. Leave blank to use the site default.</div>
+            </div>
+
+            @if (Model.Email.SentAt.HasValue)
+            {
+                <div class="small text-success mb-2">&#10003; Sent @Model.Email.SentAt.Value.ToLocalTime().ToString("MM/dd HH:mm")</div>
+            }
+            @if (!string.IsNullOrWhiteSpace(Model.Email.LastSendError))
+            {
+                <div class="small text-danger mb-2">&#9888; Last send failed: @Model.Email.LastSendError</div>
+            }
+
             <div id="view-actions-@Model.Email.Id" class="d-flex justify-content-end gap-2 mb-2">
                 <button type="button" class="btn btn-sm btn-outline-secondary copy-btn"
                         data-target="@taId">Copy Email</button>

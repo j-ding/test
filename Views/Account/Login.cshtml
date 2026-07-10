@@ -1,37 +1,35 @@
-@model SFSWebForm.Models.LoginViewModel
 @{
     ViewData["Title"] = "Sign in";
+    var returnUrl = ViewData["ReturnUrl"] as string;
+    var authError = ViewData["AuthError"] as bool? ?? false;
 }
 
 <div class="row justify-content-center">
     <div class="col-md-5">
         <div class="card shadow-sm">
-            <div class="card-body p-4">
+            <div class="card-body p-4 text-center">
                 <h2 class="h4 mb-3">Sign in</h2>
-                <p class="text-muted">Use your approved internal account name or email address to sign in. No passwords are stored.</p>
+                <p class="text-muted">Sign in with your Microsoft work account. Your name and email are pulled from your Microsoft Entra ID account &mdash; no separate password is stored by this app.</p>
 
-                <form asp-action="Login" method="post">
-                    <input type="hidden" asp-for="ReturnUrl" />
-                    <div asp-validation-summary="ModelOnly" class="text-danger"></div>
+                @if (authError)
+                {
+                    <div class="alert alert-danger py-2">Sign-in failed or was cancelled. Please try again.</div>
+                }
 
-                    <div class="mb-3">
-                        <label asp-for="Username" class="form-label">Username or email</label>
-                        <input asp-for="Username" class="form-control" autocomplete="username" placeholder="username or name@stellantis-fs.com" />
-                        <span asp-validation-for="Username" class="text-danger"></span>
-                    </div>
-
-                    <div class="form-check mb-3">
-                        <input asp-for="RememberMe" class="form-check-input" />
-                        <label asp-for="RememberMe" class="form-check-label"></label>
-                    </div>
-
-                    <button type="submit" class="btn btn-danger w-100">Sign in</button>
+                <form asp-controller="Account" asp-action="SignIn" method="post">
+                    <input type="hidden" name="returnUrl" value="@returnUrl" />
+                    @Html.AntiForgeryToken()
+                    <button type="submit" class="btn btn-danger w-100 d-flex align-items-center justify-content-center gap-2">
+                        <svg width="18" height="18" viewBox="0 0 21 21" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">
+                            <rect x="1" y="1" width="9" height="9" fill="#f25022"/>
+                            <rect x="11" y="1" width="9" height="9" fill="#7fba00"/>
+                            <rect x="1" y="11" width="9" height="9" fill="#00a4ef"/>
+                            <rect x="11" y="11" width="9" height="9" fill="#ffb900"/>
+                        </svg>
+                        Sign in with Microsoft
+                    </button>
                 </form>
             </div>
         </div>
     </div>
 </div>
-
-@section Scripts {
-    <partial name="_ValidationScriptsPartial" />
-}
