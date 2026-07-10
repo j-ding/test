@@ -6,6 +6,7 @@ using Serilog;
 using Serilog.Events;
 using SFSWebForm.Data;
 using SFSWebForm.Models;
+using SFSWebForm.Services;
 
 Log.Logger = new LoggerConfiguration()
     .MinimumLevel.Information()
