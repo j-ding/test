@@ -192,13 +192,14 @@ public class IncidentsController(AppDbContext db, EmailComposerService composer,
 
     // POST /Incidents/EditEmail/5
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditEmail(int id, string subject, string body)
+    public async Task<IActionResult> EditEmail(int id, string subject, string body, string? recipients)
     {
         var email = await db.IncidentEmails.FindAsync(id);
         if (email == null) return NotFound();
 
         email.Subject = subject;
         email.Body = body;
+        email.Recipients = recipients;
         await db.SaveChangesAsync();
 
         logger.LogInformation("Email {EmailId} manually edited on Incident {IncidentId}", id, email.IncidentId);
@@ -244,19 +245,31 @@ public class IncidentsController(AppDbContext db, EmailComposerService composer,
 
         if (email == null) return NotFound();
 
-        var windowsIdentity = User.Identity?.Name ?? User.FindFirst("Email")?.Value ?? User.FindFirst(ClaimTypes.Email)?.Value ?? "";
+        var callerIdentity = User.FindFirst("UserEmail")?.Value
+            ?? User.FindFirst(ClaimTypes.Email)?.Value
+            ?? User.Identity?.Name
+            ?? "";
 
         try
         {
-            logger.LogInformation("SendEmail request for email {EmailId} from identity '{Identity}'", id, windowsIdentity);
-            await emailSender.SendAsync(email, windowsIdentity, email.Incident.Recipients);
+            logger.LogInformation("SendEmail request for email {EmailId} from identity '{Identity}'", id, callerIdentity);
+            await emailSender.SendAsync(email, callerIdentity, email.Recipients);
+
+            email.SentAt = DateTime.UtcNow;
+            email.LastSendError = null;
+            await db.SaveChangesAsync();
+
             logger.LogInformation("Email {EmailId} dispatched by {User} for Incident {IncidentId}",
-                id, windowsIdentity, email.IncidentId);
+                id, callerIdentity, email.IncidentId);
             return Ok(new { sent = true });
         }
         catch (Exception ex)
         {
-            logger.LogError(ex, "Failed to send email {EmailId} for {User}", id, windowsIdentity);
+            logger.LogError(ex, "Failed to send email {EmailId} for {User}", id, callerIdentity);
+
+            email.LastSendError = ex.Message;
+            await db.SaveChangesAsync();
+
             return BadRequest(new { error = ex.Message });
         }
     }

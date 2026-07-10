@@ -70,11 +70,9 @@
                             <input asp-for="SenderTeam" class="form-control" placeholder="e.g. IT Operations Team, Platform Engineering" />
                             <div class="form-text">Appears at the bottom of all emails for this incident.</div>
                         </div>
-                        <div class="col-12">
-                            <label asp-for="Recipients" class="form-label fw-semibold">Email Recipients</label>
-                            <input asp-for="Recipients" class="form-control" placeholder="e.g. all-staff@company.com, it-alerts@company.com" />
-                            <div class="form-text">Comma-separated. Leave blank to use the site default configured in appsettings.json.</div>
-                        </div>
+                    </div>
+                    <div class="alert alert-info small mt-3 mb-0">
+                        Recipients are set per email below (on the Incident Detail page) once this incident is created, so you can send each notification to a different list.
                     </div>
 
                     <hr class="my-4" />
