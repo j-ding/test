@@ -1,4 +1,7 @@
 @using System.Security.Claims
+@using Microsoft.Extensions.Options
+@using SFSWebForm.Models
+@inject IOptions<TestingSettings> TestingOptions
 @{
     var _displayUser = User.FindFirst("DisplayName")?.Value
         ?? User.FindFirst(ClaimTypes.Name)?.Value
@@ -7,6 +10,7 @@
         ?? User.FindFirst(ClaimTypes.Email)?.Value
         ?? "";
     var _isAuth = User?.Identity?.IsAuthenticated ?? false;
+    var _testing = TestingOptions.Value;
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -18,6 +22,21 @@
     <link rel="stylesheet" href="~/css/site.css" asp-append-version="true" />
 </head>
 <body class="d-flex flex-column min-vh-100">
+    @if (!_testing.WindowsAuthenticationEnabled || _testing.DebugMode)
+    {
+        <div class="alert alert-warning text-center mb-0 py-1 small fw-semibold rounded-0">
+            &#9888; TESTING MODE ACTIVE —
+            @if (!_testing.WindowsAuthenticationEnabled)
+            {
+                <text>sign-in is bypassed for everyone.</text>
+            }
+            @if (_testing.DebugMode)
+            {
+                <text>full error details are shown.</text>
+            }
+            Set Testing:WindowsAuthenticationEnabled / Testing:DebugMode back in appsettings.json when done.
+        </div>
+    }
     <header>
         <nav class="navbar navbar-expand-md navbar-dark bg-danger shadow-sm">
             <div class="container-fluid">
