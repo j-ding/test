@@ -28,7 +28,128 @@ document.addEventListener('DOMContentLoaded', () => {
         });
     });
 
+    // ── Recipients directory picker ──────────────────────────────────────────
+    document.querySelectorAll('.recipients-picker').forEach(el => {
+        initRecipientsPicker(el.dataset.emailId);
+    });
+
 });
+
+// ── Recipients directory picker ──────────────────────────────────────────────
+// One picker per email card. Selected people are kept both as an in-memory list
+// (for the chip UI) and mirrored into the hidden recipients-input as a
+// comma-separated string, which is what actually gets submitted/saved.
+window.__recipientPickers = {};
+
+function initRecipientsPicker(id) {
+    const hidden = document.getElementById(`recipients-input-${id}`);
+    const chipsEl = document.getElementById(`recipients-chips-${id}`);
+    const searchEl = document.getElementById(`recipients-search-${id}`);
+    const dropdownEl = document.getElementById(`recipients-dropdown-${id}`);
+    if (!hidden || !chipsEl || !searchEl || !dropdownEl) return;
+
+    let selected = [];
+
+    function setFromString(value) {
+        selected = (value || '').split(',')
+            .map(s => s.trim())
+            .filter(Boolean)
+            .map(email => ({ email, displayName: email }));
+        renderChips();
+    }
+
+    function renderChips() {
+        chipsEl.innerHTML = '';
+        selected.forEach((person, idx) => {
+            const chip = document.createElement('span');
+            chip.className = 'badge rounded-pill text-bg-light border d-inline-flex align-items-center gap-1';
+
+            const label = document.createElement('span');
+            label.textContent = person.displayName || person.email;
+            chip.appendChild(label);
+
+            const removeBtn = document.createElement('button');
+            removeBtn.type = 'button';
+            removeBtn.className = 'btn-close';
+            removeBtn.style.fontSize = '0.55rem';
+            removeBtn.setAttribute('aria-label', 'Remove');
+            removeBtn.addEventListener('click', () => {
+                selected.splice(idx, 1);
+                syncAndRender();
+            });
+            chip.appendChild(removeBtn);
+
+            chipsEl.appendChild(chip);
+        });
+    }
+
+    function syncAndRender() {
+        hidden.value = selected.map(p => p.email).join(', ');
+        renderChips();
+    }
+
+    function renderDropdown(results) {
+        dropdownEl.innerHTML = '';
+        const filtered = results.filter(r => !selected.some(s => s.email.toLowerCase() === r.email.toLowerCase()));
+        if (filtered.length === 0) {
+            dropdownEl.classList.add('d-none');
+            return;
+        }
+        filtered.forEach(person => {
+            const item = document.createElement('button');
+            item.type = 'button';
+            item.className = 'list-group-item list-group-item-action py-1 px-2 small text-start';
+
+            const nameEl = document.createElement('div');
+            nameEl.className = 'fw-semibold';
+            nameEl.textContent = person.displayName;
+
+            const emailEl = document.createElement('div');
+            emailEl.className = 'text-muted';
+            emailEl.textContent = person.email;
+
+            item.appendChild(nameEl);
+            item.appendChild(emailEl);
+            item.addEventListener('click', () => {
+                selected.push(person);
+                syncAndRender();
+                searchEl.value = '';
+                dropdownEl.classList.add('d-none');
+                searchEl.focus();
+            });
+            dropdownEl.appendChild(item);
+        });
+        dropdownEl.classList.remove('d-none');
+    }
+
+    let debounceTimer;
+    searchEl.addEventListener('input', () => {
+        clearTimeout(debounceTimer);
+        const q = searchEl.value.trim();
+        if (q.length < 2) {
+            dropdownEl.classList.add('d-none');
+            return;
+        }
+        debounceTimer = setTimeout(async () => {
+            try {
+                const resp = await fetch(`/Incidents/SearchRecipients?q=${encodeURIComponent(q)}`);
+                if (!resp.ok) return;
+                renderDropdown(await resp.json());
+            } catch {
+                // transient search error — leave dropdown as-is, user can retype
+            }
+        }, 250);
+    });
+
+    document.addEventListener('click', (e) => {
+        if (e.target !== searchEl && !dropdownEl.contains(e.target)) {
+            dropdownEl.classList.add('d-none');
+        }
+    });
+
+    setFromString(hidden.value);
+    window.__recipientPickers[id] = { setFromString };
+}
 
 // ── Inline email editing ─────────────────────────────────────────────────────
 // Originals are stashed as JS properties on the DOM elements to avoid
@@ -43,6 +164,7 @@ function enterEditMode(id) {
     ta._original = ta.value;
     input._original = subjectStrong.textContent;
     recipientsInput._original = recipientsInput.value;
+    window.__recipientPickers[id]?.setFromString(recipientsInput.value);
 
     document.getElementById(`subject-view-${id}`).classList.add('d-none');
     document.getElementById(`subject-edit-${id}`).classList.remove('d-none');
@@ -64,6 +186,7 @@ function cancelEditMode(id) {
     ta.value = ta._original;
     input.value = input._original;
     recipientsInput.value = recipientsInput._original;
+    window.__recipientPickers[id]?.setFromString(recipientsInput.value);
 
     document.getElementById(`subject-view-${id}`).classList.remove('d-none');
     document.getElementById(`subject-edit-${id}`).classList.add('d-none');

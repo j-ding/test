@@ -37,11 +37,17 @@
 
             <div id="recipients-edit-@Model.Email.Id" class="mb-2 d-none">
                 <label class="form-label small fw-semibold mb-1">Recipients</label>
-                <input type="text" id="recipients-input-@Model.Email.Id"
-                       class="form-control form-control-sm"
-                       placeholder="e.g. all-staff@company.com, it-alerts@company.com"
-                       value="@Model.Email.Recipients" />
-                <div class="form-text">Comma-separated. Leave blank to use the site default.</div>
+                <div class="recipients-picker position-relative" data-email-id="@Model.Email.Id">
+                    <div class="d-flex flex-wrap gap-1 mb-1" id="recipients-chips-@Model.Email.Id"></div>
+                    <input type="text" class="form-control form-control-sm"
+                           id="recipients-search-@Model.Email.Id"
+                           placeholder="Type a name or email to search the directory…"
+                           autocomplete="off" />
+                    <div class="list-group position-absolute shadow-sm d-none"
+                         id="recipients-dropdown-@Model.Email.Id" style="z-index: 1000; width: 100%;"></div>
+                </div>
+                <input type="hidden" id="recipients-input-@Model.Email.Id" value="@Model.Email.Recipients" />
+                <div class="form-text">Click a person from the directory to add them. Leave empty to use the site default.</div>
             </div>
 
             @if (Model.Email.SentAt.HasValue)
