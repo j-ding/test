@@ -30,7 +30,17 @@ document.addEventListener('DOMContentLoaded', () => {
 
     // ── Recipients directory picker ──────────────────────────────────────────
     document.querySelectorAll('.recipients-picker').forEach(el => {
-        initRecipientsPicker(el.dataset.emailId);
+        const id = el.dataset.emailId;
+        initRecipientsPicker(id);
+
+        // Snapshot of the last *saved* subject/body, used when auto-saving recipients so an
+        // in-progress, not-yet-saved Subject/Body edit is never persisted as a side effect.
+        const subjectStrong = document.querySelector(`#subject-view-${id} strong`);
+        const ta = document.getElementById(`ta-${id}`);
+        window.__lastSavedContent[id] = {
+            subject: subjectStrong ? subjectStrong.textContent : '',
+            body: ta ? ta.value : ''
+        };
     });
 
 });
@@ -40,6 +50,7 @@ document.addEventListener('DOMContentLoaded', () => {
 // (for the chip UI) and mirrored into the hidden recipients-input as a
 // comma-separated string, which is what actually gets submitted/saved.
 window.__recipientPickers = {};
+window.__lastSavedContent = {};
 
 function initRecipientsPicker(id) {
     const hidden = document.getElementById(`recipients-input-${id}`);
@@ -83,9 +94,15 @@ function initRecipientsPicker(id) {
         });
     }
 
+    let saveTimer;
     function syncAndRender() {
         hidden.value = selected.map(p => p.email).join(', ');
         renderChips();
+
+        const statusEl = document.getElementById(`recipients-status-${id}`);
+        if (statusEl) statusEl.textContent = 'Saving…';
+        clearTimeout(saveTimer);
+        saveTimer = setTimeout(() => saveRecipients(id, hidden.value, statusEl), 200);
     }
 
     function renderDropdown(results) {
@@ -151,6 +168,29 @@ function initRecipientsPicker(id) {
     window.__recipientPickers[id] = { setFromString };
 }
 
+// Recipients save independently of the Subject/Body Edit/Save flow — every add/remove
+// persists immediately, reusing the EditEmail endpoint with the current subject/body values.
+async function saveRecipients(id, recipients, statusEl) {
+    const cached = window.__lastSavedContent[id] || {};
+    const subject = cached.subject ?? '';
+    const body = cached.body ?? '';
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+    try {
+        const resp = await fetch(`/Incidents/EditEmail/${id}`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ subject, body, recipients, __RequestVerificationToken: token })
+        });
+        if (statusEl) {
+            statusEl.textContent = resp.ok ? 'Saved' : 'Save failed';
+            setTimeout(() => { statusEl.textContent = ''; }, 2000);
+        }
+    } catch {
+        if (statusEl) statusEl.textContent = 'Save failed — check connection';
+    }
+}
+
 // ── Inline email editing ─────────────────────────────────────────────────────
 // Originals are stashed as JS properties on the DOM elements to avoid
 // HTML-encoding issues with multiline text in data attributes.
@@ -159,17 +199,12 @@ function enterEditMode(id) {
     const ta = document.getElementById(`ta-${id}`);
     const input = document.getElementById(`subject-input-${id}`);
     const subjectStrong = document.querySelector(`#subject-view-${id} strong`);
-    const recipientsInput = document.getElementById(`recipients-input-${id}`);
 
     ta._original = ta.value;
     input._original = subjectStrong.textContent;
-    recipientsInput._original = recipientsInput.value;
-    window.__recipientPickers[id]?.setFromString(recipientsInput.value);
 
     document.getElementById(`subject-view-${id}`).classList.add('d-none');
     document.getElementById(`subject-edit-${id}`).classList.remove('d-none');
-    document.getElementById(`recipients-view-${id}`).classList.add('d-none');
-    document.getElementById(`recipients-edit-${id}`).classList.remove('d-none');
     document.getElementById(`view-actions-${id}`).classList.add('d-none');
     document.getElementById(`edit-actions-${id}`).classList.remove('d-none');
 
@@ -181,17 +216,12 @@ function enterEditMode(id) {
 function cancelEditMode(id) {
     const ta = document.getElementById(`ta-${id}`);
     const input = document.getElementById(`subject-input-${id}`);
-    const recipientsInput = document.getElementById(`recipients-input-${id}`);
 
     ta.value = ta._original;
     input.value = input._original;
-    recipientsInput.value = recipientsInput._original;
-    window.__recipientPickers[id]?.setFromString(recipientsInput.value);
 
     document.getElementById(`subject-view-${id}`).classList.remove('d-none');
     document.getElementById(`subject-edit-${id}`).classList.add('d-none');
-    document.getElementById(`recipients-view-${id}`).classList.remove('d-none');
-    document.getElementById(`recipients-edit-${id}`).classList.add('d-none');
     document.getElementById(`view-actions-${id}`).classList.remove('d-none');
     document.getElementById(`edit-actions-${id}`).classList.add('d-none');
 
@@ -254,13 +284,11 @@ async function saveEmail(id) {
 
         if (resp.ok) {
             document.querySelector(`#subject-view-${id} strong`).textContent = subject;
-            document.querySelector(`#recipients-view-${id} strong`).textContent = recipients || '(site default — see appsettings.json)';
             const ta = document.getElementById(`ta-${id}`);
             const input = document.getElementById(`subject-input-${id}`);
-            const recipientsInput = document.getElementById(`recipients-input-${id}`);
             ta._original = body;
             input._original = subject;
-            recipientsInput._original = recipients;
+            window.__lastSavedContent[id] = { subject, body };
             cancelEditMode(id);
         } else {
             alert('Save failed — please try again.');
