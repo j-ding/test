@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc.ModelBinding.Validation;
 
 namespace SFSWebForm.Models;
 
-public enum UpdateEntryType { Update, Resolved, Reopened }
+public enum UpdateEntryType { Update, Resolved, Reopened, EmailSent, EmailSendFailed, ResolutionDrafted, EmailEdited }
 
 public class IncidentUpdate
 {

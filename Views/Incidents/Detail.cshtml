@@ -202,6 +202,54 @@
                         </div>
                     </div>
                 }
+                else if (entry.EntryType == UpdateEntryType.EmailSent)
+                {
+                    <div class="card shadow-sm mb-2">
+                        <div class="card-body py-2 px-3 small">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-semibold text-success">&#10003; Email Sent &mdash; @entry.CreatedAt.ToLocalTime().ToString("MM/dd HH:mm")</span>
+                                <span class="badge bg-success">Sent</span>
+                            </div>
+                            <p class="mb-0 mt-1 text-muted">@entry.Note</p>
+                        </div>
+                    </div>
+                }
+                else if (entry.EntryType == UpdateEntryType.EmailSendFailed)
+                {
+                    <div class="card shadow-sm mb-2 border-danger">
+                        <div class="card-body py-2 px-3 small bg-danger-subtle">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-semibold text-danger">&#9888; Send Failed &mdash; @entry.CreatedAt.ToLocalTime().ToString("MM/dd HH:mm")</span>
+                                <span class="badge bg-danger">Failed</span>
+                            </div>
+                            <p class="mb-0 mt-1 text-muted">@entry.Note</p>
+                        </div>
+                    </div>
+                }
+                else if (entry.EntryType == UpdateEntryType.ResolutionDrafted)
+                {
+                    <div class="card shadow-sm mb-2">
+                        <div class="card-body py-2 px-3 small">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-semibold text-muted">Resolution Drafted &mdash; @entry.CreatedAt.ToLocalTime().ToString("MM/dd HH:mm")</span>
+                                <span class="badge bg-secondary">Draft</span>
+                            </div>
+                            <p class="mb-0 mt-1 text-muted">@entry.Note</p>
+                        </div>
+                    </div>
+                }
+                else if (entry.EntryType == UpdateEntryType.EmailEdited)
+                {
+                    <div class="card shadow-sm mb-2">
+                        <div class="card-body py-2 px-3 small">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-semibold text-muted">Email Edited &mdash; @entry.CreatedAt.ToLocalTime().ToString("MM/dd HH:mm")</span>
+                                <span class="badge bg-secondary">Edited</span>
+                            </div>
+                            <p class="mb-0 mt-1 text-muted">@entry.Note</p>
+                        </div>
+                    </div>
+                }
                 else
                 {
                     <div class="card shadow-sm mb-2">
