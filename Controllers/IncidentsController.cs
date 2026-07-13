@@ -9,8 +9,16 @@ using SFSWebForm.Services;
 namespace SFSWebForm.Controllers;
 
 [Authorize]
-public class IncidentsController(AppDbContext db, EmailComposerService composer, EmailSenderService emailSender, ILogger<IncidentsController> logger) : Controller
+public class IncidentsController(AppDbContext db, EmailComposerService composer, EmailSenderService emailSender, DirectoryService directory, ILogger<IncidentsController> logger) : Controller
 {
+    // GET /Incidents/SearchRecipients?q=jona — org directory lookup for the recipients picker
+    [HttpGet]
+    public async Task<IActionResult> SearchRecipients(string? q)
+    {
+        var results = await directory.SearchUsersAsync(q);
+        return Json(results);
+    }
+
     // GET /Incidents
     public async Task<IActionResult> Index()
     {
