@@ -40,6 +40,7 @@ try
             outputTemplate: "{Timestamp:yyyy-MM-dd HH:mm} [{Level:u3}] {Message:lj}{NewLine}{Exception}"));
 
     var azureAd = builder.Configuration.GetSection("AzureAd");
+    var testingSettings = builder.Configuration.GetSection("Testing").Get<TestingSettings>() ?? new TestingSettings();
 
     builder.Services.AddAuthentication(options =>
         {
@@ -113,6 +114,7 @@ try
             ?? "Data Source=sfs_incidents.db"));
 
     builder.Services.Configure<MailSettings>(builder.Configuration.GetSection("MailSettings"));
+    builder.Services.Configure<TestingSettings>(builder.Configuration.GetSection("Testing"));
     builder.Services.AddScoped<EmailComposerService>();
     builder.Services.AddScoped<EmailSenderService>();
     builder.Services.AddControllersWithViews();
@@ -126,10 +128,12 @@ try
     }
 
     if (!app.Environment.IsDevelopment())
-    {
-        app.UseExceptionHandler("/Home/Error");
         app.UseHsts();
-    }
+
+    if (testingSettings.DebugMode)
+        app.UseDeveloperExceptionPage();
+    else if (!app.Environment.IsDevelopment())
+        app.UseExceptionHandler("/Home/Error");
 
     app.UseSerilogRequestLogging(opts =>
     {
@@ -139,6 +143,29 @@ try
     app.UseHttpsRedirection();
     app.UseRouting();
     app.UseAuthentication();
+
+    if (!testingSettings.WindowsAuthenticationEnabled)
+    {
+        Log.Warning("Testing:WindowsAuthenticationEnabled is false — sign-in is bypassed for ALL requests. Do not leave this off on a real deployment.");
+
+        // Overrides whatever the real auth handlers determined (normally "anonymous", since no
+        // one can complete the Entra ID challenge here) with a fixed stand-in identity, so the
+        // site can be exercised without going through sign-in at all.
+        app.Use(async (context, next) =>
+        {
+            var claims = new List<System.Security.Claims.Claim>
+            {
+                new(System.Security.Claims.ClaimTypes.Name, "Test User"),
+                new("DisplayName", "Test User"),
+                new("UserEmail", "test.user@stellantis-fs.com"),
+                new(System.Security.Claims.ClaimTypes.Email, "test.user@stellantis-fs.com")
+            };
+            var identity = new System.Security.Claims.ClaimsIdentity(claims, "TestingBypass");
+            context.User = new System.Security.Claims.ClaimsPrincipal(identity);
+            await next();
+        });
+    }
+
     app.UseAuthorization();
     app.MapStaticAssets();
 
