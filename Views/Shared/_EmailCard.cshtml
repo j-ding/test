@@ -30,24 +30,22 @@
                        value="@Model.Email.Subject" />
             </div>
 
-            <div id="recipients-view-@Model.Email.Id" class="mb-2">
-                <span class="text-muted small">Recipients:</span>
-                <strong class="small d-block">@(string.IsNullOrWhiteSpace(Model.Email.Recipients) ? "(site default — see appsettings.json)" : Model.Email.Recipients)</strong>
-            </div>
-
-            <div id="recipients-edit-@Model.Email.Id" class="mb-2 d-none">
-                <label class="form-label small fw-semibold mb-1">Recipients</label>
-                <div class="recipients-picker position-relative" data-email-id="@Model.Email.Id">
+            <div class="mb-2">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <label class="form-label small fw-semibold mb-0">Recipients</label>
+                    <small class="text-muted" id="recipients-status-@Model.Email.Id"></small>
+                </div>
+                <div class="recipients-picker position-relative border rounded px-2 py-1" data-email-id="@Model.Email.Id">
                     <div class="d-flex flex-wrap gap-1 mb-1" id="recipients-chips-@Model.Email.Id"></div>
-                    <input type="text" class="form-control form-control-sm"
+                    <input type="text" class="form-control form-control-sm border-0 p-0 shadow-none"
                            id="recipients-search-@Model.Email.Id"
                            placeholder="Type a name or email to search the directory…"
                            autocomplete="off" />
                     <div class="list-group position-absolute shadow-sm d-none"
-                         id="recipients-dropdown-@Model.Email.Id" style="z-index: 1000; width: 100%;"></div>
+                         id="recipients-dropdown-@Model.Email.Id" style="z-index: 1000; width: 100%; left: 0;"></div>
                 </div>
                 <input type="hidden" id="recipients-input-@Model.Email.Id" value="@Model.Email.Recipients" />
-                <div class="form-text">Click a person from the directory to add them. Leave empty to use the site default.</div>
+                <div class="form-text">Changes save automatically. Leave empty to use the site default.</div>
             </div>
 
             @if (Model.Email.SentAt.HasValue)

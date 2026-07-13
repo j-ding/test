@@ -19,6 +19,14 @@ public class IncidentsController(AppDbContext db, EmailComposerService composer,
         return Json(results);
     }
 
+    private static string EmailTypeLabel(EmailType type) => type switch
+    {
+        EmailType.InitialOutage => "Initial outage notification",
+        EmailType.Update => "Update notification",
+        EmailType.Resolution => "Resolution notification",
+        _ => "Email"
+    };
+
     // GET /Incidents
     public async Task<IActionResult> Index()
     {
@@ -192,6 +200,16 @@ public class IncidentsController(AppDbContext db, EmailComposerService composer,
 
         var email = composer.ComposeResolution(incident);
         db.IncidentEmails.Add(email);
+
+        db.IncidentUpdates.Add(new IncidentUpdate
+        {
+            IncidentId = id,
+            EntryType = UpdateEntryType.ResolutionDrafted,
+            Status = incident.Status,
+            Note = "Resolution notification drafted.",
+            CreatedAt = DateTime.UtcNow
+        });
+
         await db.SaveChangesAsync();
 
         logger.LogInformation("Resolution draft refreshed for Incident {Id}", id);
@@ -205,10 +223,32 @@ public class IncidentsController(AppDbContext db, EmailComposerService composer,
         var email = await db.IncidentEmails.FindAsync(id);
         if (email == null) return NotFound();
 
+        // Only log when the subject/body content actually changed — the recipients picker calls
+        // this endpoint on every add/remove, which would otherwise flood the timeline.
+        var contentChanged = email.Subject != subject || email.Body != body;
+
         email.Subject = subject;
         email.Body = body;
         email.Recipients = recipients;
         await db.SaveChangesAsync();
+
+        if (contentChanged)
+        {
+            var incidentStatus = await db.Incidents
+                .Where(i => i.Id == email.IncidentId)
+                .Select(i => i.Status)
+                .FirstOrDefaultAsync();
+
+            db.IncidentUpdates.Add(new IncidentUpdate
+            {
+                IncidentId = email.IncidentId,
+                EntryType = UpdateEntryType.EmailEdited,
+                Status = incidentStatus,
+                Note = $"{EmailTypeLabel(email.Type)} content edited.",
+                CreatedAt = DateTime.UtcNow
+            });
+            await db.SaveChangesAsync();
+        }
 
         logger.LogInformation("Email {EmailId} manually edited on Incident {IncidentId}", id, email.IncidentId);
         return Ok();
@@ -265,6 +305,16 @@ public class IncidentsController(AppDbContext db, EmailComposerService composer,
 
             email.SentAt = DateTime.UtcNow;
             email.LastSendError = null;
+
+            db.IncidentUpdates.Add(new IncidentUpdate
+            {
+                IncidentId = email.IncidentId,
+                EntryType = UpdateEntryType.EmailSent,
+                Status = email.Incident.Status,
+                Note = $"{EmailTypeLabel(email.Type)} sent by {callerIdentity}.",
+                CreatedAt = DateTime.UtcNow
+            });
+
             await db.SaveChangesAsync();
 
             logger.LogInformation("Email {EmailId} dispatched by {User} for Incident {IncidentId}",
@@ -276,6 +326,16 @@ public class IncidentsController(AppDbContext db, EmailComposerService composer,
             logger.LogError(ex, "Failed to send email {EmailId} for {User}", id, callerIdentity);
 
             email.LastSendError = ex.Message;
+
+            db.IncidentUpdates.Add(new IncidentUpdate
+            {
+                IncidentId = email.IncidentId,
+                EntryType = UpdateEntryType.EmailSendFailed,
+                Status = email.Incident.Status,
+                Note = $"{EmailTypeLabel(email.Type)} failed to send: {ex.Message}",
+                CreatedAt = DateTime.UtcNow
+            });
+
             await db.SaveChangesAsync();
 
             return BadRequest(new { error = ex.Message });
