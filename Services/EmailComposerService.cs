@@ -26,6 +26,8 @@ public class EmailComposerService
         sb.AppendLine($"  System Affected:    {incident.Application}");
         if (!string.IsNullOrWhiteSpace(incident.ImpactedApps))
             sb.AppendLine($"  Also Impacted:      {incident.ImpactedApps}");
+        if (!string.IsNullOrWhiteSpace(incident.CausalSystem))
+            sb.AppendLine($"  Causal System:      {incident.CausalSystem}");
         sb.AppendLine($"  Reason for Outage:  {reason}");
         if (!string.IsNullOrWhiteSpace(incident.ResourcesWorkingOn))
             sb.AppendLine($"  Team Engaged:       {incident.ResourcesWorkingOn}");
@@ -110,6 +112,8 @@ public class EmailComposerService
         sb.AppendLine($"  System Affected:     {incident.Application}");
         if (!string.IsNullOrWhiteSpace(incident.ImpactedApps))
             sb.AppendLine($"  Also Impacted:       {incident.ImpactedApps}");
+        if (!string.IsNullOrWhiteSpace(incident.CausalSystem))
+            sb.AppendLine($"  Causal System:       {incident.CausalSystem}");
         if (!string.IsNullOrWhiteSpace(incident.RootCause))
         {
             sb.AppendLine();

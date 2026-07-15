@@ -7,6 +7,37 @@ function appUrl(path) {
     return `${base}${path}`;
 }
 
+// Applies the Critical/Important highlight to an email card immediately on selection — no
+// server round-trip needed, purely visual feedback so it stands out in the UI right away. Uses
+// inline styles/class replacement (not toggling Bootstrap utility classes) since the card already
+// has its own border-{color} class per email type, which a plain class toggle could conflict with.
+function applyPriorityStyle(id, priority) {
+    const card = document.getElementById(`email-card-${id}`);
+    if (card) {
+        if (priority === 'Critical') {
+            card.style.border = '3px solid #dc3545';
+            card.style.backgroundColor = '#fff5f5';
+        } else {
+            card.style.border = '';
+            card.style.backgroundColor = '';
+        }
+    }
+
+    const badge = document.getElementById(`priority-badge-${id}`);
+    if (badge) {
+        if (priority === 'Critical') {
+            badge.className = 'badge bg-danger';
+            badge.textContent = '🚨 Critical';
+        } else if (priority === 'Important') {
+            badge.className = 'badge bg-warning text-dark';
+            badge.textContent = '⚠ Important';
+        } else {
+            badge.className = 'badge d-none';
+            badge.textContent = '';
+        }
+    }
+}
+
 // Re-fetches the Update Log after an AJAX action that adds a timeline entry (Send, a saved
 // Subject/Body edit, a priority change), so it appears immediately instead of needing a manual
 // page reload. window.currentIncidentId is set by Detail.cshtml; a no-op on any other page.
@@ -56,7 +87,11 @@ document.addEventListener('DOMContentLoaded', () => {
     document.querySelectorAll('[id^="priority-select-"]').forEach(sel => {
         const id = sel.dataset.emailId;
         if (sel.dataset.current) sel.value = sel.dataset.current;
-        sel.addEventListener('change', () => savePriority(id, sel.value));
+        applyPriorityStyle(id, sel.value);
+        sel.addEventListener('change', () => {
+            applyPriorityStyle(id, sel.value);
+            savePriority(id, sel.value);
+        });
     });
 
     // ── Recipients directory picker ──────────────────────────────────────────

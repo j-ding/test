@@ -31,7 +31,7 @@
                             <span asp-validation-for="ReportedBy" class="text-danger small"></span>
                         </div>
                         <div class="col-12">
-                            <label asp-for="Application" class="form-label fw-semibold">Application / System *</label>
+                            <label asp-for="Application" class="form-label fw-semibold">Impacted Application / System *</label>
                             <input asp-for="Application" class="form-control" placeholder="e.g. SFS Portal, Payroll System" />
                             <span asp-validation-for="Application" class="text-danger small"></span>
                         </div>
@@ -41,29 +41,37 @@
                             <span asp-validation-for="Summary" class="text-danger small"></span>
                         </div>
                         <div class="col-12">
-                            <label asp-for="RootCause" class="form-label fw-semibold">Root Cause <span class="text-muted fw-normal">(leave blank if unknown)</span></label>
-                            <textarea asp-for="RootCause" class="form-control" rows="2" placeholder="Defaults to 'under investigation' in email"></textarea>
+                            <label asp-for="RootCause" class="form-label fw-semibold">Root Cause *</label>
+                            <textarea asp-for="RootCause" class="form-control" rows="2" placeholder="e.g. Database connection pool exhaustion"></textarea>
+                            <span asp-validation-for="RootCause" class="text-danger small"></span>
                         </div>
                         <div class="col-12">
                             <label asp-for="ImpactedApps" class="form-label fw-semibold">Other Impacted Apps</label>
                             <input asp-for="ImpactedApps" class="form-control" placeholder="Comma-separated list" />
                         </div>
-                        <div class="col-md-6">
-                            <label asp-for="ResourcesWorkingOn" class="form-label fw-semibold">Team / Resources Engaged</label>
-                            <input asp-for="ResourcesWorkingOn" class="form-control" placeholder="Names or teams" />
+                        <div class="col-12">
+                            <label asp-for="CausalSystem" class="form-label fw-semibold">Causal System</label>
+                            <input asp-for="CausalSystem" class="form-control" placeholder="The application/system causing the impact, if known" />
                         </div>
                         <div class="col-md-6">
-                            <label asp-for="Eta" class="form-label fw-semibold">ETA</label>
+                            <label asp-for="ResourcesWorkingOn" class="form-label fw-semibold">Team / Resources Engaged *</label>
+                            <input asp-for="ResourcesWorkingOn" class="form-control" placeholder="Names or teams" />
+                            <span asp-validation-for="ResourcesWorkingOn" class="text-danger small"></span>
+                        </div>
+                        <div class="col-md-6">
+                            <label asp-for="Eta" class="form-label fw-semibold">ETA *</label>
                             <input asp-for="Eta" class="form-control" placeholder="e.g. 2:00 PM or 'No ETA'" />
+                            <span asp-validation-for="Eta" class="text-danger small"></span>
                         </div>
                         <div class="col-12">
-                            <label asp-for="NextSteps" class="form-label fw-semibold">Next Steps <span class="text-muted fw-normal">(optional — omitted from email if blank)</span></label>
+                            <label asp-for="NextSteps" class="form-label fw-semibold">Next Steps *</label>
                             <div class="btn-group btn-group-sm mb-1" role="group">
                                 <button type="button" class="btn btn-outline-secondary" onclick="applyListFormat('NextSteps', 'bullet')">&#8226; Bullets</button>
                                 <button type="button" class="btn btn-outline-secondary" onclick="applyListFormat('NextSteps', 'number')">1. Numbers</button>
                                 <button type="button" class="btn btn-outline-secondary" onclick="applyListFormat('NextSteps', 'clear')">&#10005; Clear</button>
                             </div>
                             <textarea asp-for="NextSteps" id="NextSteps" class="form-control" rows="2" placeholder="e.g. Vendor escalation underway, failover being evaluated…"></textarea>
+                            <span asp-validation-for="NextSteps" class="text-danger small"></span>
                         </div>
                         <div class="col-12">
                             <label asp-for="SenderTeam" class="form-label fw-semibold">Sending Team *</label>

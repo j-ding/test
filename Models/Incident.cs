@@ -19,14 +19,14 @@ public class Incident
     [Required, Display(Name = "Report Created By")]
     public string ReportedBy { get; set; } = "";
 
-    [Required, Display(Name = "Application")]
+    [Required, Display(Name = "Impacted Application / System")]
     public string Application { get; set; } = "";
 
     [Required, Display(Name = "Summary")]
     public string Summary { get; set; } = "";
 
-    [Display(Name = "Root Cause")]
-    public string? RootCause { get; set; }
+    [Required, Display(Name = "Root Cause")]
+    public string RootCause { get; set; } = "";
 
     [Display(Name = "Status")]
     public IncidentStatus Status { get; set; } = IncidentStatus.Open;
@@ -34,17 +34,22 @@ public class Incident
     [Display(Name = "Impacted Apps")]
     public string? ImpactedApps { get; set; }
 
-    [Display(Name = "Resources Working On")]
-    public string? ResourcesWorkingOn { get; set; }
+    // The system/app believed to have caused the impact (distinct from ImpactedApps, which lists
+    // what else was affected as a result).
+    [Display(Name = "Causal System")]
+    public string? CausalSystem { get; set; }
+
+    [Required, Display(Name = "Team / Resources Engaged")]
+    public string ResourcesWorkingOn { get; set; } = "";
 
     [Display(Name = "Resolution / Action")]
     public string? ResolutionAction { get; set; }
 
-    [Display(Name = "ETA")]
-    public string? Eta { get; set; }
+    [Required, Display(Name = "ETA")]
+    public string Eta { get; set; } = "";
 
-    [Display(Name = "Next Steps")]
-    public string? NextSteps { get; set; }
+    [Required, Display(Name = "Next Steps")]
+    public string NextSteps { get; set; } = "";
 
     [Display(Name = "Sending Team / Group")]
     public string SenderTeam { get; set; } = "IT Operations Team";

@@ -6,18 +6,11 @@
     string headerText = Model.IsDark ? "text-dark" : "text-white";
 }
 
-<div class="card shadow-sm mb-3 border-@Model.Color">
+<div class="card shadow-sm mb-3 border-@Model.Color" id="email-card-@Model.Email.Id">
     <div class="card-header d-flex align-items-center justify-content-between bg-@Model.Color @headerText">
         <div class="d-flex align-items-center gap-2">
             <span class="fw-semibold">@Model.Label</span>
-            @if (Model.Email.Priority == EmailPriority.Critical)
-            {
-                <span class="badge bg-danger">&#128680; Critical</span>
-            }
-            else if (Model.Email.Priority == EmailPriority.Important)
-            {
-                <span class="badge bg-warning text-dark">&#9888; Important</span>
-            }
+            <span class="badge d-none" id="priority-badge-@Model.Email.Id"></span>
         </div>
         <div class="d-flex align-items-center gap-2">
             <small class="opacity-75">@Model.Email.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm")</small>
