@@ -46,10 +46,10 @@
                     <label class="form-label small fw-semibold mb-0">Priority</label>
                     <small class="text-muted" id="priority-status-@Model.Email.Id"></small>
                 </div>
-                <select class="form-select form-select-sm" id="priority-select-@Model.Email.Id" data-email-id="@Model.Email.Id">
-                    <option value="Normal" @(Model.Email.Priority == EmailPriority.Normal ? "selected" : "")>Normal</option>
-                    <option value="Important" @(Model.Email.Priority == EmailPriority.Important ? "selected" : "")>Important</option>
-                    <option value="Critical" @(Model.Email.Priority == EmailPriority.Critical ? "selected" : "")>Critical</option>
+                <select class="form-select form-select-sm" id="priority-select-@Model.Email.Id" data-email-id="@Model.Email.Id" data-current="@Model.Email.Priority">
+                    <option value="Normal">Normal</option>
+                    <option value="Important">Important</option>
+                    <option value="Critical">Critical</option>
                 </select>
                 <div class="form-text">Important/Critical add a banner to the email, mark it high-importance in Outlook, and prefix the subject line.</div>
             </div>
