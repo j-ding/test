@@ -10,6 +10,13 @@ public enum EmailType
     Resolution
 }
 
+public enum EmailPriority
+{
+    Normal,
+    Important,
+    Critical
+}
+
 public class IncidentEmail
 {
     public int Id { get; set; }
@@ -23,6 +30,9 @@ public class IncidentEmail
     // falls back to MailSettings.DefaultRecipients when blank.
     [Display(Name = "Recipients")]
     public string? Recipients { get; set; }
+
+    [Display(Name = "Priority")]
+    public EmailPriority Priority { get; set; } = EmailPriority.Normal;
 
     public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
     public DateTime? SentAt { get; set; }

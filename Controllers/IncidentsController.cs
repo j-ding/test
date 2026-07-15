@@ -218,7 +218,7 @@ public class IncidentsController(AppDbContext db, EmailComposerService composer,
 
     // POST /Incidents/EditEmail/5
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditEmail(int id, string subject, string body, string? recipients)
+    public async Task<IActionResult> EditEmail(int id, string subject, string body, string? recipients, EmailPriority priority)
     {
         var email = await db.IncidentEmails.FindAsync(id);
         if (email == null) return NotFound();
@@ -226,27 +226,45 @@ public class IncidentsController(AppDbContext db, EmailComposerService composer,
         // Only log when the subject/body content actually changed — the recipients picker calls
         // this endpoint on every add/remove, which would otherwise flood the timeline.
         var contentChanged = email.Subject != subject || email.Body != body;
+        var priorityChanged = email.Priority != priority;
 
         email.Subject = subject;
         email.Body = body;
         email.Recipients = recipients;
+        email.Priority = priority;
         await db.SaveChangesAsync();
 
-        if (contentChanged)
+        if (contentChanged || priorityChanged)
         {
             var incidentStatus = await db.Incidents
                 .Where(i => i.Id == email.IncidentId)
                 .Select(i => i.Status)
                 .FirstOrDefaultAsync();
 
-            db.IncidentUpdates.Add(new IncidentUpdate
+            if (contentChanged)
             {
-                IncidentId = email.IncidentId,
-                EntryType = UpdateEntryType.EmailEdited,
-                Status = incidentStatus,
-                Note = $"{EmailTypeLabel(email.Type)} content edited.",
-                CreatedAt = DateTime.UtcNow
-            });
+                db.IncidentUpdates.Add(new IncidentUpdate
+                {
+                    IncidentId = email.IncidentId,
+                    EntryType = UpdateEntryType.EmailEdited,
+                    Status = incidentStatus,
+                    Note = $"{EmailTypeLabel(email.Type)} content edited.",
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            if (priorityChanged)
+            {
+                db.IncidentUpdates.Add(new IncidentUpdate
+                {
+                    IncidentId = email.IncidentId,
+                    EntryType = UpdateEntryType.PriorityChanged,
+                    Status = incidentStatus,
+                    Note = $"{EmailTypeLabel(email.Type)} priority changed to {priority}.",
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
             await db.SaveChangesAsync();
         }
 
