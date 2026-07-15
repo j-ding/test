@@ -167,6 +167,22 @@ function initRecipientsPicker(id) {
         }, 250);
     });
 
+    // Typing a raw address and pressing Enter/comma adds it directly, without requiring a
+    // directory match — needed for distribution lists/groups, which a people-only Graph search
+    // never returns, and as a fallback if directory search doesn't have someone indexed.
+    searchEl.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ',') return;
+        e.preventDefault();
+
+        const value = searchEl.value.trim().replace(/,$/, '').trim();
+        if (value && value.includes('@') && !selected.some(s => s.email.toLowerCase() === value.toLowerCase())) {
+            selected.push({ email: value, displayName: value });
+            syncAndRender();
+        }
+        searchEl.value = '';
+        dropdownEl.classList.add('d-none');
+    });
+
     document.addEventListener('click', (e) => {
         if (e.target !== searchEl && !dropdownEl.contains(e.target)) {
             dropdownEl.classList.add('d-none');
