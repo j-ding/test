@@ -69,6 +69,7 @@ function initRecipientsPicker(id) {
     if (!hidden || !chipsEl || !searchEl || !dropdownEl) return;
 
     let selected = [];
+    let pendingSave = null;
 
     function setFromString(value) {
         selected = (value || '').split(',')
@@ -111,7 +112,13 @@ function initRecipientsPicker(id) {
         const statusEl = document.getElementById(`recipients-status-${id}`);
         if (statusEl) statusEl.textContent = 'Saving…';
         clearTimeout(saveTimer);
-        saveTimer = setTimeout(() => saveRecipients(id, hidden.value, statusEl), 200);
+        // Tracked so sendEmail() can await it — otherwise clicking Send right after adding a
+        // recipient can race ahead of this debounced save and read stale (empty) data server-side.
+        pendingSave = new Promise(resolve => {
+            saveTimer = setTimeout(() => {
+                saveRecipients(id, hidden.value, statusEl).finally(resolve);
+            }, 200);
+        });
     }
 
     function renderDropdown(results) {
@@ -167,13 +174,10 @@ function initRecipientsPicker(id) {
         }, 250);
     });
 
-    // Typing a raw address and pressing Enter/comma adds it directly, without requiring a
-    // directory match — needed for distribution lists/groups, which a people-only Graph search
-    // never returns, and as a fallback if directory search doesn't have someone indexed.
-    searchEl.addEventListener('keydown', (e) => {
-        if (e.key !== 'Enter' && e.key !== ',') return;
-        e.preventDefault();
-
+    // Typing a raw address adds it directly, without requiring a directory match — needed for
+    // distribution lists/groups, which a people-only Graph search never returns, and as a
+    // fallback if directory search doesn't have someone indexed.
+    function commitTyped() {
         const value = searchEl.value.trim().replace(/,$/, '').trim();
         if (value && value.includes('@') && !selected.some(s => s.email.toLowerCase() === value.toLowerCase())) {
             selected.push({ email: value, displayName: value });
@@ -181,6 +185,21 @@ function initRecipientsPicker(id) {
         }
         searchEl.value = '';
         dropdownEl.classList.add('d-none');
+    }
+
+    searchEl.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ',') return;
+        e.preventDefault();
+        commitTyped();
+    });
+
+    // Fallback for leaving a typed address uncommitted (e.g. clicking straight to Send without
+    // pressing Enter first). Delayed slightly so a dropdown-item click's own handler (which runs
+    // right after blur) gets to clear the box first, avoiding a double-add of the same person.
+    // sendEmail() additionally calls commitPending() directly — this alone isn't reliable timing
+    // for that case, since focus moving to the Send button doesn't wait for this timeout.
+    searchEl.addEventListener('blur', () => {
+        setTimeout(commitTyped, 150);
     });
 
     document.addEventListener('click', (e) => {
@@ -190,7 +209,16 @@ function initRecipientsPicker(id) {
     });
 
     setFromString(hidden.value);
-    window.__recipientPickers[id] = { setFromString };
+    window.__recipientPickers[id] = { setFromString, commitPending: commitTyped, waitForPendingSave: () => pendingSave };
+}
+
+// Flushes any typed-but-uncommitted recipient text, then waits for any in-flight/debounced
+// recipients auto-save, before Send reads the database — so clicking Send right after adding a
+// recipient (or without pressing Enter first) can't race ahead of that save and see stale data.
+async function flushRecipientsBeforeSend(id) {
+    window.__recipientPickers[id]?.commitPending();
+    const pending = window.__recipientPickers[id]?.waitForPendingSave();
+    if (pending) await pending;
 }
 
 // Recipients save independently of the Subject/Body Edit/Save flow — every add/remove
@@ -263,6 +291,8 @@ async function sendEmail(id) {
     btn.disabled = true;
 
     try {
+        await flushRecipientsBeforeSend(id);
+
         const resp = await fetch(appUrl(`/Incidents/SendEmail/${id}`), {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
