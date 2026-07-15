@@ -105,8 +105,10 @@ public class EmailSenderService(IOptions<MailSettings> opts, ILogger<EmailSender
 
     // The stored Body stays plain text (simple to edit in a textarea) — this wraps it in a
     // styled HTML shell only at send time, so recipients get a nicer-looking email without the
-    // edit UI ever needing to deal with raw HTML. Monospace + pre-wrap preserves the composer's
-    // manually-aligned "  Label:   Value" lines, matching how the app's own preview renders it.
+    // edit UI ever needing to deal with raw HTML. Outlook's Word-based HTML renderer doesn't
+    // reliably honor CSS white-space:pre-wrap (it collapses newlines/spacing into one run-on
+    // paragraph), so line breaks and the composer's manually-aligned "  Label:   Value" spacing
+    // are converted explicitly to <br> and &nbsp; instead, which every client respects.
     private static string BuildHtmlBody(IncidentEmail email)
     {
         var (headerColor, eyebrow) = email.Type switch
@@ -128,7 +130,13 @@ public class EmailSenderService(IOptions<MailSettings> opts, ILogger<EmailSender
 
         var application = System.Net.WebUtility.HtmlEncode(email.Incident.Application);
         var encodedEyebrow = System.Net.WebUtility.HtmlEncode(eyebrow);
-        var encodedBody = System.Net.WebUtility.HtmlEncode(email.Body);
+        var bodyHtml = string.Join("<br>", email.Body
+            .Replace("\r\n", "\n")
+            .Split('\n')
+            .Select(line => System.Text.RegularExpressions.Regex.Replace(
+                System.Net.WebUtility.HtmlEncode(line),
+                "  +",
+                m => string.Concat(Enumerable.Repeat("&nbsp;", m.Length)))));
 
         return $"""
             <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:680px;margin:0 auto;border:1px solid #dee2e6;border-radius:8px;overflow:hidden;">
@@ -137,7 +145,7 @@ public class EmailSenderService(IOptions<MailSettings> opts, ILogger<EmailSender
                 <div style="font-size:22px;font-weight:700;margin-top:4px;">{application}</div>
               </div>
               {priorityBanner}
-              <div style="padding:24px 28px;color:#212529;font-size:14px;line-height:1.6;white-space:pre-wrap;font-family:Consolas,'Courier New',monospace;">{encodedBody}</div>
+              <div style="padding:24px 28px;color:#212529;font-size:14px;line-height:1.6;font-family:Consolas,'Courier New',monospace;">{bodyHtml}</div>
             </div>
             """;
     }
