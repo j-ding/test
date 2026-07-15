@@ -161,6 +161,7 @@ public class IncidentsController(AppDbContext db, EmailComposerService composer,
         incident.RootCause = form.RootCause;
         incident.ResolutionAction = form.ResolutionAction;
         incident.ImpactedApps = form.ImpactedApps;
+        incident.CausalSystem = form.CausalSystem;
         if (!string.IsNullOrWhiteSpace(form.SenderTeam))
             incident.SenderTeam = form.SenderTeam;
         incident.UpdatedAt = DateTime.UtcNow;
@@ -200,6 +201,7 @@ public class IncidentsController(AppDbContext db, EmailComposerService composer,
         incident.RootCause = form.RootCause;
         incident.ResolutionAction = form.ResolutionAction;
         incident.ImpactedApps = form.ImpactedApps;
+        incident.CausalSystem = form.CausalSystem;
         incident.ResolvedTime = form.ResolvedTime ?? DateTime.Now;
         if (!string.IsNullOrWhiteSpace(form.SenderTeam))
             incident.SenderTeam = form.SenderTeam;

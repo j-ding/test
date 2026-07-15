@@ -52,7 +52,7 @@
             <div class="card-header bg-light fw-semibold">Incident Summary</div>
             <div class="card-body small">
                 <dl class="row mb-0">
-                    <dt class="col-5 text-muted">Application</dt>
+                    <dt class="col-5 text-muted">Impacted Application / System</dt>
                     <dd class="col-7 fw-semibold">@Model.Application</dd>
 
                     <dt class="col-5 text-muted">Failure Time</dt>
@@ -80,6 +80,12 @@
                     {
                         <dt class="col-5 text-muted">Also Impacted</dt>
                         <dd class="col-7">@Model.ImpactedApps</dd>
+                    }
+
+                    @if (!string.IsNullOrEmpty(Model.CausalSystem))
+                    {
+                        <dt class="col-5 text-muted">Causal System</dt>
+                        <dd class="col-7">@Model.CausalSystem</dd>
                     }
 
                     @if (!string.IsNullOrEmpty(Model.ResourcesWorkingOn))
@@ -129,6 +135,10 @@
                         <div class="mb-2">
                             <label class="form-label small fw-semibold">Impacted Apps</label>
                             <input type="text" name="ImpactedApps" class="form-control form-control-sm" value="@Model.ImpactedApps" />
+                        </div>
+                        <div class="mb-2">
+                            <label class="form-label small fw-semibold">Causal System</label>
+                            <input type="text" name="CausalSystem" class="form-control form-control-sm" value="@Model.CausalSystem" />
                         </div>
                         <div class="mb-3">
                             <label class="form-label small fw-semibold">Sending Team</label>
