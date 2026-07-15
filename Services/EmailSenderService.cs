@@ -25,18 +25,36 @@ public class EmailSenderService(IOptions<MailSettings> opts, ILogger<EmailSender
 
         var normalizedIdentity = string.IsNullOrWhiteSpace(callerIdentity) ? "" : callerIdentity.Trim();
 
-        // Send as the signed-in user so notifications accurately reflect who actually dispatched
-        // them — this was previously backwards: SenderMailbox took priority unconditionally, so
-        // every send went out from that one configured mailbox regardless of who clicked Send.
-        // SenderMailbox is now only a fallback for the rare case identity isn't a real email
-        // (e.g. a non-interactive caller with no signed-in user context).
-        var senderEmail = normalizedIdentity.Contains('@') ? normalizedIdentity : _settings.SenderMailbox;
+        string senderEmail;
+        if (!string.IsNullOrWhiteSpace(email.SenderOverride) &&
+            _settings.SharedMailboxes.Any(m => string.Equals(m.Address, email.SenderOverride, StringComparison.OrdinalIgnoreCase)))
+        {
+            // Explicitly chosen shared mailbox (e.g. "IT Operations") — only honored if it's still
+            // in the configured allow-list, in case it was removed from appsettings.json since
+            // this email's Send From was set.
+            senderEmail = email.SenderOverride.Trim();
+        }
+        else if (normalizedIdentity.Contains('@'))
+        {
+            // Default: send as the signed-in user so notifications accurately reflect who actually
+            // dispatched them — this was previously backwards, with SenderMailbox taking priority
+            // unconditionally so every send went out from one hardcoded mailbox regardless of who
+            // clicked Send.
+            senderEmail = normalizedIdentity;
+        }
+        else
+        {
+            // Last-resort fallback for the rare case identity isn't a real email (e.g. a
+            // non-interactive caller with no signed-in user context).
+            senderEmail = _settings.SenderMailbox;
+        }
 
         if (string.IsNullOrWhiteSpace(senderEmail))
             throw new InvalidOperationException(
                 "Could not determine a sender mailbox: the signed-in user has no email claim, and no SenderMailbox fallback is configured in appsettings.json.");
 
-        logger.LogInformation("Resolved sender email '{SenderEmail}' from identity '{Identity}'", senderEmail, normalizedIdentity);
+        logger.LogInformation("Resolved sender email '{SenderEmail}' from identity '{Identity}' (SenderOverride: '{Override}')",
+            senderEmail, normalizedIdentity, email.SenderOverride);
 
         var recipientString = string.IsNullOrWhiteSpace(emailRecipients)
             ? _settings.DefaultRecipients

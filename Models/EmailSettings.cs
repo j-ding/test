@@ -11,4 +11,15 @@ public class MailSettings
     public string SenderMailbox { get; set; } = "";
     // Comma-separated fallback when an incident has no Recipients set
     public string DefaultRecipients { get; set; } = "";
+    // Shared mailboxes users can optionally send a notification "as" instead of their own
+    // identity (e.g. a shared "IT Operations" alias). Purely a configured allow-list — the app
+    // doesn't verify real Exchange Send-As delegation, since Mail.Send (Application permission)
+    // can already send as any mailbox in the tenant regardless of who's picked here.
+    public List<SharedMailbox> SharedMailboxes { get; set; } = [];
+}
+
+public class SharedMailbox
+{
+    public string DisplayName { get; set; } = "";
+    public string Address { get; set; } = "";
 }

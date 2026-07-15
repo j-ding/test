@@ -1,9 +1,12 @@
 @using SFSWebForm.Models
+@using Microsoft.Extensions.Options
 @model EmailCardViewModel
+@inject IOptions<MailSettings> MailOptions
 @{
     var bodyId = $"body-{Model.Email.Id}";
     var taId = $"ta-{Model.Email.Id}";
     string headerText = Model.IsDark ? "text-dark" : "text-white";
+    var sharedMailboxes = MailOptions.Value.SharedMailboxes;
 }
 
 <div class="card shadow-sm mb-3 border-@Model.Color" id="email-card-@Model.Email.Id">
@@ -46,6 +49,24 @@
                 </select>
                 <div class="form-text">Important/Critical add a banner to the email, mark it high-importance in Outlook, and prefix the subject line.</div>
             </div>
+
+            @if (sharedMailboxes.Any())
+            {
+                <div class="mb-2">
+                    <div class="d-flex align-items-center justify-content-between mb-1">
+                        <label class="form-label small fw-semibold mb-0">Send From</label>
+                        <small class="text-muted" id="sender-status-@Model.Email.Id"></small>
+                    </div>
+                    <select class="form-select form-select-sm" id="sender-select-@Model.Email.Id" data-email-id="@Model.Email.Id" data-current="@Model.Email.SenderOverride">
+                        <option value="">Me (signed-in user)</option>
+                        @foreach (var mbx in sharedMailboxes)
+                        {
+                            <option value="@mbx.Address">@mbx.DisplayName (@mbx.Address)</option>
+                        }
+                    </select>
+                    <div class="form-text">Send this notification from a shared mailbox instead of your own account.</div>
+                </div>
+            }
 
             <div class="mb-2">
                 <div class="d-flex align-items-center justify-content-between mb-1">
