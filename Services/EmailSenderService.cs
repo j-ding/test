@@ -104,11 +104,11 @@ public class EmailSenderService(IOptions<MailSettings> opts, ILogger<EmailSender
     }
 
     // The stored Body stays plain text (simple to edit in a textarea) — this wraps it in a
-    // styled HTML shell only at send time, so recipients get a nicer-looking email without the
-    // edit UI ever needing to deal with raw HTML. Outlook's Word-based HTML renderer doesn't
-    // reliably honor CSS white-space:pre-wrap (it collapses newlines/spacing into one run-on
-    // paragraph), so line breaks and the composer's manually-aligned "  Label:   Value" spacing
-    // are converted explicitly to <br> and &nbsp; instead, which every client respects.
+    // styled HTML shell only at send time. Only the colored banner is boxed; the message body
+    // itself flows like a normal email (no card/border around it, no monospace font) rather than
+    // looking like "an email inside an email." Section headers (e.g. "ROOT CAUSE:") and field
+    // labels (e.g. "Time of Outage:") get bolded/underlined automatically based on the composer's
+    // known formatting conventions.
     private static string BuildHtmlBody(IncidentEmail email)
     {
         var (headerColor, eyebrow) = email.Type switch
@@ -122,9 +122,9 @@ public class EmailSenderService(IOptions<MailSettings> opts, ILogger<EmailSender
         var priorityBanner = email.Priority switch
         {
             EmailPriority.Critical =>
-                "<div style=\"background:#f8d7da;color:#842029;padding:10px 28px;font-weight:700;font-size:13px;letter-spacing:.03em;border-bottom:1px solid #f5c2c7;\">&#128680; CRITICAL &mdash; immediate attention required</div>",
+                "<div style=\"background:#f8d7da;color:#842029;padding:10px 28px;font-weight:700;font-size:13px;letter-spacing:.03em;\">&#128680; CRITICAL &mdash; immediate attention required</div>",
             EmailPriority.Important =>
-                "<div style=\"background:#fff3cd;color:#664d03;padding:10px 28px;font-weight:600;font-size:13px;letter-spacing:.03em;border-bottom:1px solid #ffe69c;\">&#9888; IMPORTANT</div>",
+                "<div style=\"background:#fff3cd;color:#664d03;padding:10px 28px;font-weight:600;font-size:13px;letter-spacing:.03em;\">&#9888; IMPORTANT</div>",
             _ => ""
         };
 
@@ -133,20 +133,49 @@ public class EmailSenderService(IOptions<MailSettings> opts, ILogger<EmailSender
         var bodyHtml = string.Join("<br>", email.Body
             .Replace("\r\n", "\n")
             .Split('\n')
-            .Select(line => System.Text.RegularExpressions.Regex.Replace(
-                System.Net.WebUtility.HtmlEncode(line),
-                "  +",
-                m => string.Concat(Enumerable.Repeat("&nbsp;", m.Length)))));
+            .Select(FormatBodyLine));
 
         return $"""
-            <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:680px;margin:0 auto;border:1px solid #dee2e6;border-radius:8px;overflow:hidden;">
-              <div style="background:{headerColor};color:#ffffff;padding:20px 28px;">
+            <div style="font-family:'Segoe UI',Arial,sans-serif;max-width:680px;">
+              <div style="background:{headerColor};color:#ffffff;padding:16px 24px;">
                 <div style="font-size:12px;font-weight:600;letter-spacing:.06em;text-transform:uppercase;opacity:.85;">{encodedEyebrow}</div>
-                <div style="font-size:22px;font-weight:700;margin-top:4px;">{application}</div>
+                <div style="font-size:20px;font-weight:700;margin-top:2px;">{application}</div>
               </div>
               {priorityBanner}
-              <div style="padding:24px 28px;color:#212529;font-size:14px;line-height:1.6;font-family:Consolas,'Courier New',monospace;">{bodyHtml}</div>
+              <div style="padding:20px 4px;color:#212529;font-size:14px;line-height:1.6;">{bodyHtml}</div>
             </div>
             """;
     }
+
+    private static readonly System.Text.RegularExpressions.Regex KeyValueLine =
+        new(@"^(\s*)([^:]{1,40}:)(\s{2,})(.+)$");
+
+    private static string FormatBodyLine(string rawLine)
+    {
+        var trimmed = rawLine.Trim();
+
+        // Standalone all-caps section headers the composer emits on their own line,
+        // e.g. "NEXT STEPS:", "ROOT CAUSE:", "UPDATE:"
+        if (trimmed.Length > 1 && trimmed.EndsWith(':') && trimmed.Any(char.IsLetter) && trimmed == trimmed.ToUpperInvariant())
+            return $"<strong><u>{EncodeAndPreserveSpaces(trimmed)}</u></strong>";
+
+        // Aligned "  Label:     Value" lines the composer emits for key facts — bold just the label
+        var match = KeyValueLine.Match(rawLine);
+        if (match.Success)
+        {
+            return EncodeAndPreserveSpaces(match.Groups[1].Value)
+                + "<strong>" + EncodeAndPreserveSpaces(match.Groups[2].Value) + "</strong>"
+                + EncodeAndPreserveSpaces(match.Groups[3].Value)
+                + EncodeAndPreserveSpaces(match.Groups[4].Value);
+        }
+
+        return EncodeAndPreserveSpaces(rawLine);
+    }
+
+    // HTML-encodes, then converts runs of 2+ spaces to &nbsp; so manually-aligned spacing survives
+    // in email clients that don't honor white-space CSS — single spaces stay normal/wrappable.
+    private static string EncodeAndPreserveSpaces(string text) =>
+        System.Text.RegularExpressions.Regex.Replace(
+            System.Net.WebUtility.HtmlEncode(text), "  +",
+            m => string.Concat(Enumerable.Repeat("&nbsp;", m.Length)));
 }

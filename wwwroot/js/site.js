@@ -7,6 +7,21 @@ function appUrl(path) {
     return `${base}${path}`;
 }
 
+// Re-fetches the Update Log after an AJAX action that adds a timeline entry (Send, a saved
+// Subject/Body edit, a priority change), so it appears immediately instead of needing a manual
+// page reload. window.currentIncidentId is set by Detail.cshtml; a no-op on any other page.
+async function refreshUpdateLog() {
+    if (!window.currentIncidentId) return;
+    try {
+        const resp = await fetch(appUrl(`/Incidents/UpdateLogPartial/${window.currentIncidentId}`));
+        if (!resp.ok) return;
+        const container = document.getElementById('update-log-container');
+        if (container) container.innerHTML = await resp.text();
+    } catch {
+        // non-critical — the log will be current on the next full page load regardless
+    }
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // ── Copy buttons ────────────────────────────────────────────────────────
@@ -273,6 +288,7 @@ async function savePriority(id, priority) {
             statusEl.textContent = resp.ok ? 'Saved' : 'Save failed';
             setTimeout(() => { statusEl.textContent = ''; }, 2000);
         }
+        if (resp.ok) refreshUpdateLog();
     } catch {
         if (statusEl) statusEl.textContent = 'Save failed — check connection';
     }
@@ -341,11 +357,13 @@ async function sendEmail(id) {
                 btn.classList.replace('btn-success', 'btn-outline-success');
                 btn.disabled = false;
             }, 3000);
+            refreshUpdateLog();
         } else {
             const data = await resp.json().catch(() => ({}));
             alert(`Send failed: ${data.error || 'Unknown error'}`);
             btn.textContent = origText;
             btn.disabled = false;
+            refreshUpdateLog();
         }
     } catch {
         alert('Network error — please try again.');
@@ -380,6 +398,7 @@ async function saveEmail(id) {
             input._original = subject;
             window.__lastSavedContent[id] = { subject, body };
             cancelEditMode(id);
+            refreshUpdateLog();
         } else {
             alert('Save failed — please try again.');
         }
