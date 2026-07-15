@@ -34,6 +34,11 @@ public class IncidentEmail
     [Display(Name = "Priority")]
     public EmailPriority Priority { get; set; } = EmailPriority.Normal;
 
+    // A shared mailbox address to send this email "as" instead of the signed-in user (must match
+    // one of MailSettings.SharedMailboxes). Null/blank means send as whoever clicks Send.
+    [Display(Name = "Send From")]
+    public string? SenderOverride { get; set; }
+
     public DateTime GeneratedAt { get; set; } = DateTime.UtcNow;
     public DateTime? SentAt { get; set; }
     public string? LastSendError { get; set; }

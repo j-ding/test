@@ -23,27 +23,38 @@ public class EmailSenderService(IOptions<MailSettings> opts, ILogger<EmailSender
             throw new InvalidOperationException(
                 "Azure credentials not configured. Set TenantId, ClientId, and ClientSecret in appsettings.json.");
 
-        if (string.IsNullOrWhiteSpace(_settings.EmailDomain) && string.IsNullOrWhiteSpace(_settings.SenderMailbox))
-            throw new InvalidOperationException("Either EmailDomain or SenderMailbox must be configured in appsettings.json.");
-
         var normalizedIdentity = string.IsNullOrWhiteSpace(callerIdentity) ? "" : callerIdentity.Trim();
-        var senderEmail = _settings.SenderMailbox;
 
-        if (string.IsNullOrWhiteSpace(senderEmail))
+        string senderEmail;
+        if (!string.IsNullOrWhiteSpace(email.SenderOverride) &&
+            _settings.SharedMailboxes.Any(m => string.Equals(m.Address, email.SenderOverride, StringComparison.OrdinalIgnoreCase)))
         {
-            var username = normalizedIdentity.Contains('\\')
-                ? normalizedIdentity.Split('\\').Last()
-                : normalizedIdentity;
-
-            if (normalizedIdentity.Contains('@'))
-            {
-                username = normalizedIdentity.Split('@')[0];
-            }
-
-            senderEmail = $"{username}@{_settings.EmailDomain}";
+            // Explicitly chosen shared mailbox (e.g. "IT Operations") — only honored if it's still
+            // in the configured allow-list, in case it was removed from appsettings.json since
+            // this email's Send From was set.
+            senderEmail = email.SenderOverride.Trim();
+        }
+        else if (normalizedIdentity.Contains('@'))
+        {
+            // Default: send as the signed-in user so notifications accurately reflect who actually
+            // dispatched them — this was previously backwards, with SenderMailbox taking priority
+            // unconditionally so every send went out from one hardcoded mailbox regardless of who
+            // clicked Send.
+            senderEmail = normalizedIdentity;
+        }
+        else
+        {
+            // Last-resort fallback for the rare case identity isn't a real email (e.g. a
+            // non-interactive caller with no signed-in user context).
+            senderEmail = _settings.SenderMailbox;
         }
 
-        logger.LogInformation("Resolved sender email '{SenderEmail}' from identity '{Identity}'", senderEmail, normalizedIdentity);
+        if (string.IsNullOrWhiteSpace(senderEmail))
+            throw new InvalidOperationException(
+                "Could not determine a sender mailbox: the signed-in user has no email claim, and no SenderMailbox fallback is configured in appsettings.json.");
+
+        logger.LogInformation("Resolved sender email '{SenderEmail}' from identity '{Identity}' (SenderOverride: '{Override}')",
+            senderEmail, normalizedIdentity, email.SenderOverride);
 
         var recipientString = string.IsNullOrWhiteSpace(emailRecipients)
             ? _settings.DefaultRecipients

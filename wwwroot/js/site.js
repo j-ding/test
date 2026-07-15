@@ -38,6 +38,12 @@ function applyPriorityStyle(id, priority) {
     }
 }
 
+// Reads the current "Send From" selection, if the shared-mailbox dropdown exists on this card
+// (it's only rendered when at least one shared mailbox is configured).
+function getSenderValue(id) {
+    return document.getElementById(`sender-select-${id}`)?.value ?? '';
+}
+
 // Re-fetches the Update Log after an AJAX action that adds a timeline entry (Send, a saved
 // Subject/Body edit, a priority change), so it appears immediately instead of needing a manual
 // page reload. window.currentIncidentId is set by Detail.cshtml; a no-op on any other page.
@@ -92,6 +98,13 @@ document.addEventListener('DOMContentLoaded', () => {
             applyPriorityStyle(id, sel.value);
             savePriority(id, sel.value);
         });
+    });
+
+    // ── Send From (shared mailbox) selector ──────────────────────────────────
+    document.querySelectorAll('[id^="sender-select-"]').forEach(sel => {
+        const id = sel.dataset.emailId;
+        if (sel.dataset.current) sel.value = sel.dataset.current;
+        sel.addEventListener('change', () => saveSender(id, sel.value));
     });
 
     // ── Recipients directory picker ──────────────────────────────────────────
@@ -285,13 +298,14 @@ async function saveRecipients(id, recipients, statusEl) {
     const subject = cached.subject ?? '';
     const body = cached.body ?? '';
     const priority = document.getElementById(`priority-select-${id}`)?.value ?? 'Normal';
+    const senderOverride = getSenderValue(id);
     const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
     try {
         const resp = await fetch(appUrl(`/Incidents/EditEmail/${id}`), {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ subject, body, recipients, priority, __RequestVerificationToken: token })
+            body: new URLSearchParams({ subject, body, recipients, priority, senderOverride, __RequestVerificationToken: token })
         });
         if (statusEl) {
             statusEl.textContent = resp.ok ? 'Saved' : 'Save failed';
@@ -311,13 +325,42 @@ async function savePriority(id, priority) {
     const subject = cached.subject ?? '';
     const body = cached.body ?? '';
     const recipients = document.getElementById(`recipients-input-${id}`)?.value ?? '';
+    const senderOverride = getSenderValue(id);
     const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
     try {
         const resp = await fetch(appUrl(`/Incidents/EditEmail/${id}`), {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ subject, body, recipients, priority, __RequestVerificationToken: token })
+            body: new URLSearchParams({ subject, body, recipients, priority, senderOverride, __RequestVerificationToken: token })
+        });
+        if (statusEl) {
+            statusEl.textContent = resp.ok ? 'Saved' : 'Save failed';
+            setTimeout(() => { statusEl.textContent = ''; }, 2000);
+        }
+        if (resp.ok) refreshUpdateLog();
+    } catch {
+        if (statusEl) statusEl.textContent = 'Save failed — check connection';
+    }
+}
+
+// Send From saves independently too, reusing EditEmail with the current subject/body/recipients/priority.
+async function saveSender(id, senderOverride) {
+    const statusEl = document.getElementById(`sender-status-${id}`);
+    if (statusEl) statusEl.textContent = 'Saving…';
+
+    const cached = window.__lastSavedContent[id] || {};
+    const subject = cached.subject ?? '';
+    const body = cached.body ?? '';
+    const recipients = document.getElementById(`recipients-input-${id}`)?.value ?? '';
+    const priority = document.getElementById(`priority-select-${id}`)?.value ?? 'Normal';
+    const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
+
+    try {
+        const resp = await fetch(appUrl(`/Incidents/EditEmail/${id}`), {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+            body: new URLSearchParams({ subject, body, recipients, priority, senderOverride, __RequestVerificationToken: token })
         });
         if (statusEl) {
             statusEl.textContent = resp.ok ? 'Saved' : 'Save failed';
@@ -412,6 +455,7 @@ async function saveEmail(id) {
     const body = document.getElementById(`ta-${id}`).value;
     const recipients = document.getElementById(`recipients-input-${id}`).value.trim();
     const priority = document.getElementById(`priority-select-${id}`)?.value ?? 'Normal';
+    const senderOverride = getSenderValue(id);
     const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
     const saveBtn = document.getElementById(`save-btn-${id}`);
@@ -422,7 +466,7 @@ async function saveEmail(id) {
         const resp = await fetch(appUrl(`/Incidents/EditEmail/${id}`), {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-            body: new URLSearchParams({ subject, body, recipients, priority, __RequestVerificationToken: token })
+            body: new URLSearchParams({ subject, body, recipients, priority, senderOverride, __RequestVerificationToken: token })
         });
 
         if (resp.ok) {

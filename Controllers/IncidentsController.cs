@@ -233,7 +233,7 @@ public class IncidentsController(AppDbContext db, EmailComposerService composer,
 
     // POST /Incidents/EditEmail/5
     [HttpPost, ValidateAntiForgeryToken]
-    public async Task<IActionResult> EditEmail(int id, string subject, string body, string? recipients, EmailPriority priority)
+    public async Task<IActionResult> EditEmail(int id, string subject, string body, string? recipients, EmailPriority priority, string? senderOverride)
     {
         var email = await db.IncidentEmails.FindAsync(id);
         if (email == null) return NotFound();
@@ -242,14 +242,16 @@ public class IncidentsController(AppDbContext db, EmailComposerService composer,
         // this endpoint on every add/remove, which would otherwise flood the timeline.
         var contentChanged = email.Subject != subject || email.Body != body;
         var priorityChanged = email.Priority != priority;
+        var senderChanged = email.SenderOverride != senderOverride;
 
         email.Subject = subject;
         email.Body = body;
         email.Recipients = recipients;
         email.Priority = priority;
+        email.SenderOverride = senderOverride;
         await db.SaveChangesAsync();
 
-        if (contentChanged || priorityChanged)
+        if (contentChanged || priorityChanged || senderChanged)
         {
             var incidentStatus = await db.Incidents
                 .Where(i => i.Id == email.IncidentId)
@@ -276,6 +278,19 @@ public class IncidentsController(AppDbContext db, EmailComposerService composer,
                     EntryType = UpdateEntryType.PriorityChanged,
                     Status = incidentStatus,
                     Note = $"{EmailTypeLabel(email.Type)} priority changed to {priority}.",
+                    CreatedAt = DateTime.UtcNow
+                });
+            }
+
+            if (senderChanged)
+            {
+                var senderLabel = string.IsNullOrWhiteSpace(senderOverride) ? "the signed-in user" : senderOverride;
+                db.IncidentUpdates.Add(new IncidentUpdate
+                {
+                    IncidentId = email.IncidentId,
+                    EntryType = UpdateEntryType.SenderChanged,
+                    Status = incidentStatus,
+                    Note = $"{EmailTypeLabel(email.Type)} will now send from {senderLabel}.",
                     CreatedAt = DateTime.UtcNow
                 });
             }
