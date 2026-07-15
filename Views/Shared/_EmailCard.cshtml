@@ -45,7 +45,7 @@
                          id="recipients-dropdown-@Model.Email.Id" style="z-index: 1000; width: 100%; left: 0;"></div>
                 </div>
                 <input type="hidden" id="recipients-input-@Model.Email.Id" value="@Model.Email.Recipients" />
-                <div class="form-text">Changes save automatically. Leave empty to use the site default.</div>
+                <div class="form-text">Click a directory match, or type a full address (e.g. a distribution list) and press Enter. Changes save automatically — leave empty to use the site default.</div>
             </div>
 
             @if (Model.Email.SentAt.HasValue)
