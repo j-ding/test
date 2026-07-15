@@ -40,6 +40,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // ── Priority selector ────────────────────────────────────────────────────
     document.querySelectorAll('[id^="priority-select-"]').forEach(sel => {
         const id = sel.dataset.emailId;
+        if (sel.dataset.current) sel.value = sel.dataset.current;
         sel.addEventListener('change', () => savePriority(id, sel.value));
     });
 
