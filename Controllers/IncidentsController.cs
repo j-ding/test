@@ -19,6 +19,19 @@ public class IncidentsController(AppDbContext db, EmailComposerService composer,
         return Json(results);
     }
 
+    // GET /Incidents/UpdateLogPartial/5 — re-fetched after AJAX actions (Send, edits, priority
+    // changes) that add a timeline entry, so the log shows up immediately without a full reload.
+    [HttpGet]
+    public async Task<IActionResult> UpdateLogPartial(int id)
+    {
+        var incident = await db.Incidents
+            .Include(i => i.Updates.OrderBy(u => u.CreatedAt))
+            .FirstOrDefaultAsync(i => i.Id == id);
+
+        if (incident == null) return NotFound();
+        return PartialView("_UpdateLog", incident);
+    }
+
     private static string EmailTypeLabel(EmailType type) => type switch
     {
         EmailType.InitialOutage => "Initial outage notification",
