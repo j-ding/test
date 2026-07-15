@@ -1,3 +1,12 @@
+// Prefixes an app-rooted path (e.g. "/Incidents/SendEmail/5") with window.appBaseUrl (set in
+// _Layout.cshtml via Url.Content("~/")) so requests resolve correctly whether the app is hosted
+// at the domain root or under an IIS virtual application path like /Internal/SFSWebForm/stage.
+// A bare leading "/" always means "domain root" to the browser, which breaks under a sub-path.
+function appUrl(path) {
+    const base = (window.appBaseUrl || '/').replace(/\/$/, '');
+    return `${base}${path}`;
+}
+
 document.addEventListener('DOMContentLoaded', () => {
 
     // ── Copy buttons ────────────────────────────────────────────────────────
@@ -149,7 +158,7 @@ function initRecipientsPicker(id) {
         }
         debounceTimer = setTimeout(async () => {
             try {
-                const resp = await fetch(`/Incidents/SearchRecipients?q=${encodeURIComponent(q)}`);
+                const resp = await fetch(appUrl(`/Incidents/SearchRecipients?q=${encodeURIComponent(q)}`));
                 if (!resp.ok) return;
                 renderDropdown(await resp.json());
             } catch {
@@ -177,7 +186,7 @@ async function saveRecipients(id, recipients, statusEl) {
     const token = document.querySelector('input[name="__RequestVerificationToken"]')?.value;
 
     try {
-        const resp = await fetch(`/Incidents/EditEmail/${id}`, {
+        const resp = await fetch(appUrl(`/Incidents/EditEmail/${id}`), {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({ subject, body, recipients, __RequestVerificationToken: token })
@@ -238,7 +247,7 @@ async function sendEmail(id) {
     btn.disabled = true;
 
     try {
-        const resp = await fetch(`/Incidents/SendEmail/${id}`, {
+        const resp = await fetch(appUrl(`/Incidents/SendEmail/${id}`), {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({ __RequestVerificationToken: token })
@@ -276,7 +285,7 @@ async function saveEmail(id) {
     saveBtn.disabled = true;
 
     try {
-        const resp = await fetch(`/Incidents/EditEmail/${id}`, {
+        const resp = await fetch(appUrl(`/Incidents/EditEmail/${id}`), {
             method: 'POST',
             headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
             body: new URLSearchParams({ subject, body, recipients, __RequestVerificationToken: token })
