@@ -27,6 +27,10 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .Property(e => e.Type)
             .HasConversion<string>();
 
+        modelBuilder.Entity<IncidentEmail>()
+            .Property(e => e.Priority)
+            .HasConversion<string>();
+
         modelBuilder.Entity<IncidentUpdate>()
             .Property(u => u.Status)
             .HasConversion<string>();

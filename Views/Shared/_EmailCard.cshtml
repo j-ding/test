@@ -1,4 +1,5 @@
-@model SFSWebForm.Models.EmailCardViewModel
+@using SFSWebForm.Models
+@model EmailCardViewModel
 @{
     var bodyId = $"body-{Model.Email.Id}";
     var taId = $"ta-{Model.Email.Id}";
@@ -7,7 +8,17 @@
 
 <div class="card shadow-sm mb-3 border-@Model.Color">
     <div class="card-header d-flex align-items-center justify-content-between bg-@Model.Color @headerText">
-        <span class="fw-semibold">@Model.Label</span>
+        <div class="d-flex align-items-center gap-2">
+            <span class="fw-semibold">@Model.Label</span>
+            @if (Model.Email.Priority == EmailPriority.Critical)
+            {
+                <span class="badge bg-danger">&#128680; Critical</span>
+            }
+            else if (Model.Email.Priority == EmailPriority.Important)
+            {
+                <span class="badge bg-warning text-dark">&#9888; Important</span>
+            }
+        </div>
         <div class="d-flex align-items-center gap-2">
             <small class="opacity-75">@Model.Email.GeneratedAt.ToLocalTime().ToString("MM/dd HH:mm")</small>
             <button class="btn btn-sm btn-light py-0 px-2" type="button"
@@ -28,6 +39,19 @@
                 <input type="text" id="subject-input-@Model.Email.Id"
                        class="form-control form-control-sm"
                        value="@Model.Email.Subject" />
+            </div>
+
+            <div class="mb-2">
+                <div class="d-flex align-items-center justify-content-between mb-1">
+                    <label class="form-label small fw-semibold mb-0">Priority</label>
+                    <small class="text-muted" id="priority-status-@Model.Email.Id"></small>
+                </div>
+                <select class="form-select form-select-sm" id="priority-select-@Model.Email.Id" data-email-id="@Model.Email.Id">
+                    <option value="Normal" @(Model.Email.Priority == EmailPriority.Normal ? "selected" : "")>Normal</option>
+                    <option value="Important" @(Model.Email.Priority == EmailPriority.Important ? "selected" : "")>Important</option>
+                    <option value="Critical" @(Model.Email.Priority == EmailPriority.Critical ? "selected" : "")>Critical</option>
+                </select>
+                <div class="form-text">Important/Critical add a banner to the email, mark it high-importance in Outlook, and prefix the subject line.</div>
             </div>
 
             <div class="mb-2">

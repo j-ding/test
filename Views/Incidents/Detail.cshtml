@@ -250,6 +250,18 @@
                         </div>
                     </div>
                 }
+                else if (entry.EntryType == UpdateEntryType.PriorityChanged)
+                {
+                    <div class="card shadow-sm mb-2">
+                        <div class="card-body py-2 px-3 small">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <span class="fw-semibold text-muted">Priority Changed &mdash; @entry.CreatedAt.ToLocalTime().ToString("MM/dd HH:mm")</span>
+                                <span class="badge bg-secondary">Priority</span>
+                            </div>
+                            <p class="mb-0 mt-1 text-muted">@entry.Note</p>
+                        </div>
+                    </div>
+                }
                 else
                 {
                     <div class="card shadow-sm mb-2">
