@@ -98,6 +98,13 @@
         </div>
     </footer>
 
+    <script>
+        // Resolves to "/" at the domain root, or e.g. "/Internal/SFSWebForm/stage/" when hosted
+        // under an IIS virtual application path — site.js must prefix its fetch() URLs with this,
+        // since a hardcoded leading "/" always resolves to the domain root in the browser, not the
+        // app's actual base path.
+        window.appBaseUrl = '@Url.Content("~/")';
+    </script>
     <script src="~/lib/jquery/dist/jquery.min.js"></script>
     <script src="~/lib/bootstrap/dist/js/bootstrap.bundle.min.js"></script>
     <script src="~/js/site.js" asp-append-version="true"></script>
