@@ -23,25 +23,18 @@ public class EmailSenderService(IOptions<MailSettings> opts, ILogger<EmailSender
             throw new InvalidOperationException(
                 "Azure credentials not configured. Set TenantId, ClientId, and ClientSecret in appsettings.json.");
 
-        if (string.IsNullOrWhiteSpace(_settings.EmailDomain) && string.IsNullOrWhiteSpace(_settings.SenderMailbox))
-            throw new InvalidOperationException("Either EmailDomain or SenderMailbox must be configured in appsettings.json.");
-
         var normalizedIdentity = string.IsNullOrWhiteSpace(callerIdentity) ? "" : callerIdentity.Trim();
-        var senderEmail = _settings.SenderMailbox;
+
+        // Send as the signed-in user so notifications accurately reflect who actually dispatched
+        // them — this was previously backwards: SenderMailbox took priority unconditionally, so
+        // every send went out from that one configured mailbox regardless of who clicked Send.
+        // SenderMailbox is now only a fallback for the rare case identity isn't a real email
+        // (e.g. a non-interactive caller with no signed-in user context).
+        var senderEmail = normalizedIdentity.Contains('@') ? normalizedIdentity : _settings.SenderMailbox;
 
         if (string.IsNullOrWhiteSpace(senderEmail))
-        {
-            var username = normalizedIdentity.Contains('\\')
-                ? normalizedIdentity.Split('\\').Last()
-                : normalizedIdentity;
-
-            if (normalizedIdentity.Contains('@'))
-            {
-                username = normalizedIdentity.Split('@')[0];
-            }
-
-            senderEmail = $"{username}@{_settings.EmailDomain}";
-        }
+            throw new InvalidOperationException(
+                "Could not determine a sender mailbox: the signed-in user has no email claim, and no SenderMailbox fallback is configured in appsettings.json.");
 
         logger.LogInformation("Resolved sender email '{SenderEmail}' from identity '{Identity}'", senderEmail, normalizedIdentity);
 
