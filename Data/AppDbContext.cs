@@ -39,6 +39,16 @@ public class AppDbContext(DbContextOptions<AppDbContext> options) : DbContext(op
             .Property(u => u.EntryType)
             .HasConversion<string>();
 
+        // [Required] on NextExpectedUpdate is only meant to enforce the Add Update *form*
+        // requiring a value — by EF Core convention it would otherwise also make the database
+        // column NOT NULL, breaking every other place that logs an IncidentUpdate audit entry
+        // (Send success/failure, priority/sender changes, resolution drafts, resolve, reopen),
+        // none of which have a "next expected update" to set. Overriding it back to nullable here
+        // keeps the column optional while [Required] still drives MVC validation on the form.
+        modelBuilder.Entity<IncidentUpdate>()
+            .Property(u => u.NextExpectedUpdate)
+            .IsRequired(false);
+
         modelBuilder.Entity<Incident>()
             .Property(i => i.Status)
             .HasConversion<string>();
