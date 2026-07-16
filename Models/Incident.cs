@@ -52,7 +52,7 @@ public class Incident
     public string NextSteps { get; set; } = "";
 
     [Display(Name = "Sending Team / Group")]
-    public string SenderTeam { get; set; } = "IT Operations Team";
+    public string SenderTeam { get; set; } = "IT Communications";
 
     [Display(Name = "Resolution Time")]
     public DateTime? ResolvedTime { get; set; }
