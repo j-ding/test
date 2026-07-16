@@ -6,7 +6,11 @@
     var bodyId = $"body-{Model.Email.Id}";
     var taId = $"ta-{Model.Email.Id}";
     string headerText = Model.IsDark ? "text-dark" : "text-white";
-    var sharedMailboxes = MailOptions.Value.SharedMailboxes;
+    // Defensive: skip any misconfigured entry (e.g. wrong JSON shape in appsettings.json) rather
+    // than rendering a broken/blank dropdown option for it.
+    var sharedMailboxes = MailOptions.Value.SharedMailboxes
+        .Where(m => !string.IsNullOrWhiteSpace(m.Address))
+        .ToList();
 }
 
 <div class="card shadow-sm mb-3 border-@Model.Color" id="email-card-@Model.Email.Id">
