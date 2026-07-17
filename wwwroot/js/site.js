@@ -252,9 +252,12 @@ function initRecipientsPicker(id) {
         if (value && value.includes('@') && !selected.some(s => s.email.toLowerCase() === value.toLowerCase())) {
             selected.push({ email: value, displayName: value });
             syncAndRender();
+            searchEl.value = '';
+            dropdownEl.classList.add('d-none');
         }
-        searchEl.value = '';
-        dropdownEl.classList.add('d-none');
+        // If it's not a full email address, leave the typed text and dropdown alone — the user is
+        // still searching the directory (e.g. they hit Enter out of habit before results loaded),
+        // and wiping the box here would erase what they typed just as slow results come in.
     }
 
     searchEl.addEventListener('keydown', (e) => {
