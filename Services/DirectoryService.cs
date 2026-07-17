@@ -38,10 +38,12 @@ public class DirectoryService(IOptions<MailSettings> opts, ILogger<DirectoryServ
 
         try
         {
+            // No accountEnabled filter: shared mailboxes (e.g. applicationproductionsupport@...)
+            // get an Azure AD user object like anyone else, but Microsoft disables direct sign-in
+            // on them by default, so filtering to accountEnabled eq true was hiding them.
             var result = await graphClient.Users.GetAsync(config =>
             {
                 config.QueryParameters.Search = $"\"displayName:{term}\" OR \"mail:{term}\"";
-                config.QueryParameters.Filter = "accountEnabled eq true";
                 config.QueryParameters.Select = ["displayName", "mail", "userPrincipalName"];
                 config.QueryParameters.Top = top;
                 config.Headers.Add("ConsistencyLevel", "eventual");
