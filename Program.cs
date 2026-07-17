@@ -117,7 +117,7 @@ try
     builder.Services.Configure<TestingSettings>(builder.Configuration.GetSection("Testing"));
     builder.Services.AddScoped<EmailComposerService>();
     builder.Services.AddScoped<EmailSenderService>();
-    builder.Services.AddScoped<DirectoryService>();
+    builder.Services.AddSingleton<DirectoryService>();
     builder.Services.AddControllersWithViews();
 
     var app = builder.Build();
